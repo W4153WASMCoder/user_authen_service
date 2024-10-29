@@ -1,7 +1,7 @@
 import pool from '../db.js';
 import type { RowDataPacket } from 'mysql2';
 
-class Project {
+export class Project {
     private _isDirty: boolean = false; // Track if the record needs saving
 
     ProjectID: number;
@@ -96,7 +96,7 @@ class Project {
     }
 
 }
-class ProjectFile {
+export class ProjectFile {
     private _isDirty: boolean = false;
 
     FileID: number;

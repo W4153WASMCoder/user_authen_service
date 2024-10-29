@@ -1,6 +1,6 @@
 import type { Application, Request, Response, NextFunction } from 'express';
 
-export function generate_router(app: Application) {
+export function generate_routes(app: Application) {
     app.get('/data', async (req: Request, res: Response, next: NextFunction) => {
         try {
             // Your route handling logic here

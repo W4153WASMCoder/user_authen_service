@@ -4,7 +4,9 @@ import express from 'express';
 import type { Application } from 'express';
 import http, { Server as HttpServer } from 'http';
 import fs from 'fs';
-import { generate_router } from './router.js';
+import { generate_routes } from './routes/router.js';
+import project_router from './routes/project.js';
+import project_files_router from './routes/project_files.js';
 
 // Load environment variables from .env file
 dotenv.config();
@@ -21,7 +23,9 @@ const httpServer: HttpServer = http.createServer(app);
 app.use(express.static('../'));
 app.use(express.json())
 app.use(express.urlencoded({extended:false}))
-generate_router(app);
+generate_routes(app);
+app.use(project_router);
+app.use(project_files_router);
 //End Middleware definition
 
 //Start Server

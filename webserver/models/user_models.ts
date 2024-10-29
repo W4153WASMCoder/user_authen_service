@@ -1,7 +1,7 @@
 import pool from '../db';
 import type { RowDataPacket } from 'mysql2';
 
-class User {
+export class User {
     UserID: number | null;
     sub: string; // Unique identifier from the OpenID provider
     email: string;
@@ -81,7 +81,7 @@ class User {
     }
 }
 
-class ActiveToken {
+export class ActiveToken {
     TokenID: number | null;
     UserID: number;
     TTL: number;
