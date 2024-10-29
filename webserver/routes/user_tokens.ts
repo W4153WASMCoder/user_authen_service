@@ -1,7 +1,7 @@
 // routes/active_token.ts
-import { Router, Request, Response } from 'express';
-import { ActiveToken } from '../models/user_models.js'; // Adjust the path according to your project structure
-import { paginate } from '../middleware/pagination.js';
+import { Router, Request, Response } from "express";
+import { ActiveToken } from "../models/user_models.js"; // Adjust the path according to your project structure
+import { paginate } from "../middleware/pagination.js";
 
 const router = Router();
 
@@ -94,43 +94,47 @@ const router = Router();
  *       500:
  *         description: Internal server error
  */
-router.get('/', paginate, async (req: Request, res: Response): Promise<void> => {
-  const { limit, offset } = (req as any).pagination;
+router.get(
+    "/",
+    paginate,
+    async (req: Request, res: Response): Promise<void> => {
+        const { limit, offset } = (req as any).pagination;
 
-  try {
-    // Fetch tokens with pagination
-    const { tokens, total } = await ActiveToken.findAll(limit, offset);
+        try {
+            // Fetch tokens with pagination
+            const { tokens, total } = await ActiveToken.findAll(limit, offset);
 
-    // Generate HATEOAS links
-    const baseUrl = `${req.protocol}://${req.get('host')}${req.baseUrl}`;
-    const links: any = {
-      self: `${baseUrl}?limit=${limit}&offset=${offset}`,
-      first: `${baseUrl}?limit=${limit}&offset=0`,
-      last: `${baseUrl}?limit=${limit}&offset=${Math.floor((total - 1) / limit) * limit}`,
-    };
+            // Generate HATEOAS links
+            const baseUrl = `${req.protocol}://${req.get("host")}${req.baseUrl}`;
+            const links: any = {
+                self: `${baseUrl}?limit=${limit}&offset=${offset}`,
+                first: `${baseUrl}?limit=${limit}&offset=0`,
+                last: `${baseUrl}?limit=${limit}&offset=${Math.floor((total - 1) / limit) * limit}`,
+            };
 
-    // Conditionally add 'next' link if the offset is within range
-    if (offset + limit < total) {
-      links.next = `${baseUrl}?limit=${limit}&offset=${offset + limit}`;
-    }
+            // Conditionally add 'next' link if the offset is within range
+            if (offset + limit < total) {
+                links.next = `${baseUrl}?limit=${limit}&offset=${offset + limit}`;
+            }
 
-    // Conditionally add 'prev' link if the offset is within range
-    if (offset - limit >= 0) {
-      links.prev = `${baseUrl}?limit=${limit}&offset=${offset - limit}`;
-    }
+            // Conditionally add 'prev' link if the offset is within range
+            if (offset - limit >= 0) {
+                links.prev = `${baseUrl}?limit=${limit}&offset=${offset - limit}`;
+            }
 
-    res.json({
-      total,
-      limit,
-      offset,
-      data: tokens,
-      links,
-    });
-  } catch (error) {
-    console.error('Error fetching active tokens:', error);
-    res.status(500).send('Internal server error');
-  }
-});
+            res.json({
+                total,
+                limit,
+                offset,
+                data: tokens,
+                links,
+            });
+        } catch (error) {
+            console.error("Error fetching active tokens:", error);
+            res.status(500).send("Internal server error");
+        }
+    },
+);
 
 /**
  * @swagger
@@ -220,71 +224,71 @@ router.get('/', paginate, async (req: Request, res: Response): Promise<void> => 
  *         description: Invalid input
  */
 
-router.get('/:id', async (req: Request, res: Response): Promise<void> => {
-  const tokenId = parseInt(req.params.id);
-  if (isNaN(tokenId)) {
-    res.status(400).send('Invalid token ID');
-    return;
-  }
-
-  try {
-    const token = await ActiveToken.findById(tokenId);
-    if (!token) {
-      res.status(404).send('Token not found');
-      return;
-    }
-    res.json(token);
-  } catch (error) {
-    console.error(`Error fetching token with ID ${tokenId}:`, error);
-    res.status(500).send('Internal server error');
-  }
-});
-
-router.post('/', async (req: Request, res: Response): Promise<void> => {
-  const { UserID, TTL } = req.body;
-  if (!UserID) {
-    res.status(400).send('Missing required field: UserID');
-    return;
-  }
-
-  const ttlValue = TTL || 3600; // Default TTL if not provided
-  const newToken = new ActiveToken(null, UserID, ttlValue);
-
-  try {
-    await newToken.save();
-    res.status(201).json(newToken);
-  } catch (error) {
-    console.error('Error creating token:', error);
-    res.status(500).send('Internal server error');
-  }
-});
-
-router.put('/:id', async (req: Request, res: Response): Promise<void> => {
-  const tokenId = parseInt(req.params.id);
-  if (isNaN(tokenId)) {
-    res.status(400).send('Invalid token ID');
-    return;
-  }
-
-  try {
-    const token = await ActiveToken.findById(tokenId);
-    if (!token) {
-      res.status(404).send('Token not found');
-      return;
+router.get("/:id", async (req: Request, res: Response): Promise<void> => {
+    const tokenId = parseInt(req.params.id);
+    if (isNaN(tokenId)) {
+        res.status(400).send("Invalid token ID");
+        return;
     }
 
+    try {
+        const token = await ActiveToken.findById(tokenId);
+        if (!token) {
+            res.status(404).send("Token not found");
+            return;
+        }
+        res.json(token);
+    } catch (error) {
+        console.error(`Error fetching token with ID ${tokenId}:`, error);
+        res.status(500).send("Internal server error");
+    }
+});
+
+router.post("/", async (req: Request, res: Response): Promise<void> => {
     const { UserID, TTL } = req.body;
+    if (!UserID) {
+        res.status(400).send("Missing required field: UserID");
+        return;
+    }
 
-    if (UserID !== undefined) token.UserID = UserID;
-    if (TTL !== undefined) token.TTL = TTL;
-    token.CreationDate = new Date();
+    const ttlValue = TTL || 3600; // Default TTL if not provided
+    const newToken = new ActiveToken(null, UserID, ttlValue);
 
-    await token.save();
-    res.json(token);
-  } catch (error) {
-    console.error(`Error updating token with ID ${tokenId}:`, error);
-    res.status(500).send('Internal server error');
-  }
+    try {
+        await newToken.save();
+        res.status(201).json(newToken);
+    } catch (error) {
+        console.error("Error creating token:", error);
+        res.status(500).send("Internal server error");
+    }
+});
+
+router.put("/:id", async (req: Request, res: Response): Promise<void> => {
+    const tokenId = parseInt(req.params.id);
+    if (isNaN(tokenId)) {
+        res.status(400).send("Invalid token ID");
+        return;
+    }
+
+    try {
+        const token = await ActiveToken.findById(tokenId);
+        if (!token) {
+            res.status(404).send("Token not found");
+            return;
+        }
+
+        const { UserID, TTL } = req.body;
+
+        if (UserID !== undefined) token.UserID = UserID;
+        if (TTL !== undefined) token.TTL = TTL;
+        token.CreationDate = new Date();
+
+        await token.save();
+        res.json(token);
+    } catch (error) {
+        console.error(`Error updating token with ID ${tokenId}:`, error);
+        res.status(500).send("Internal server error");
+    }
 });
 
 export default router;

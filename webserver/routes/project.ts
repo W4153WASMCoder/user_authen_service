@@ -1,7 +1,7 @@
 // routes/project.ts
-import { Router, Request, Response } from 'express';
-import { Project } from '../models/files_models.js';
-import { paginate } from '../middleware/pagination.js';
+import { Router, Request, Response } from "express";
+import { Project } from "../models/files_models.js";
+import { paginate } from "../middleware/pagination.js";
 
 const router = Router();
 
@@ -98,43 +98,47 @@ const router = Router();
  *       '500':
  *         description: Internal server error
  */
-router.get('/', paginate, async (req: Request, res: Response): Promise<void> => {
-  const { limit, offset } = (req as any).pagination;
+router.get(
+    "/",
+    paginate,
+    async (req: Request, res: Response): Promise<void> => {
+        const { limit, offset } = (req as any).pagination;
 
-  try {
-    // Fetch projects with pagination
-    const { projects, total } = await Project.findAll(limit, offset);
+        try {
+            // Fetch projects with pagination
+            const { projects, total } = await Project.findAll(limit, offset);
 
-    // Generate HATEOAS links
-    const baseUrl = `${req.protocol}://${req.get('host')}${req.baseUrl}`;
-    const links: any = {
-      self: `${baseUrl}?limit=${limit}&offset=${offset}`,
-      first: `${baseUrl}?limit=${limit}&offset=0`,
-      last: `${baseUrl}?limit=${limit}&offset=${Math.floor((total - 1) / limit) * limit}`,
-    };
+            // Generate HATEOAS links
+            const baseUrl = `${req.protocol}://${req.get("host")}${req.baseUrl}`;
+            const links: any = {
+                self: `${baseUrl}?limit=${limit}&offset=${offset}`,
+                first: `${baseUrl}?limit=${limit}&offset=0`,
+                last: `${baseUrl}?limit=${limit}&offset=${Math.floor((total - 1) / limit) * limit}`,
+            };
 
-    // Conditionally add 'next' link if the offset is within range
-    if (offset + limit < total) {
-      links.next = `${baseUrl}?limit=${limit}&offset=${offset + limit}`;
-    }
+            // Conditionally add 'next' link if the offset is within range
+            if (offset + limit < total) {
+                links.next = `${baseUrl}?limit=${limit}&offset=${offset + limit}`;
+            }
 
-    // Conditionally add 'prev' link if the offset is within range
-    if (offset - limit >= 0) {
-      links.prev = `${baseUrl}?limit=${limit}&offset=${offset - limit}`;
-    }
+            // Conditionally add 'prev' link if the offset is within range
+            if (offset - limit >= 0) {
+                links.prev = `${baseUrl}?limit=${limit}&offset=${offset - limit}`;
+            }
 
-    res.json({
-      total,
-      limit,
-      offset,
-      data: projects,
-      links,
-    });
-  } catch (error) {
-    console.error('Error fetching projects:', error);
-    res.status(500).send('Internal server error');
-  }
-});
+            res.json({
+                total,
+                limit,
+                offset,
+                data: projects,
+                links,
+            });
+        } catch (error) {
+            console.error("Error fetching projects:", error);
+            res.status(500).send("Internal server error");
+        }
+    },
+);
 
 /**
  * @swagger
@@ -251,97 +255,95 @@ router.get('/', paginate, async (req: Request, res: Response): Promise<void> => 
  *         description: Invalid input
  */
 
-router.get('/:id', async (req: Request, res: Response): Promise<void> => {
-  const projectId = parseInt(req.params.id);
-  if (isNaN(projectId)) {
-    res.status(400).send('Invalid project ID');
-    return;
-  }
-
-  try {
-    const project = await Project.find(projectId);
-    if (!project) {
-      res.status(404).send('Project not found');
-      return;
-    }
-    res.json(project);
-  } catch (error) {
-    console.error(`Error fetching project with ID ${projectId}:`, error);
-    res.status(500).send('Internal server error');
-  }
-});
-
-router.post('/', async (req: Request, res: Response): Promise<void> => {
-  const { OwningUserID, ProjectName } = req.body;
-  if (OwningUserID == null || ProjectName == null) {
-    res.status(400).send('Missing required fields');
-    return;
-  }
-
-  const newProject = new Project(
-    null, // ProjectID will be auto-generated
-    OwningUserID,
-    ProjectName,
-    new Date()
-  );
-
-  try {
-    await newProject.save();
-    const location = `${req.protocol}://${req.get('host')}${req.baseUrl}/${newProject.ProjectID}`;
-    res.status(201)
-      .header('Location', location)
-      .json(newProject);
-  } catch (error) {
-    console.error('Error creating project:', error);
-    res.status(500).send('Internal server error');
-  }
-});
-
-router.put('/:id', async (req: Request, res: Response): Promise<void> => {
-  const projectId = parseInt(req.params.id);
-  if (isNaN(projectId)) {
-    res.status(400).send('Invalid project ID');
-    return;
-  }
-
-  try {
-    const project = await Project.find(projectId);
-    if (!project) {
-      res.status(404).send('Project not found');
-      return;
+router.get("/:id", async (req: Request, res: Response): Promise<void> => {
+    const projectId = parseInt(req.params.id);
+    if (isNaN(projectId)) {
+        res.status(400).send("Invalid project ID");
+        return;
     }
 
+    try {
+        const project = await Project.find(projectId);
+        if (!project) {
+            res.status(404).send("Project not found");
+            return;
+        }
+        res.json(project);
+    } catch (error) {
+        console.error(`Error fetching project with ID ${projectId}:`, error);
+        res.status(500).send("Internal server error");
+    }
+});
+
+router.post("/", async (req: Request, res: Response): Promise<void> => {
     const { OwningUserID, ProjectName } = req.body;
+    if (OwningUserID == null || ProjectName == null) {
+        res.status(400).send("Missing required fields");
+        return;
+    }
 
-    if (OwningUserID != null) project.OwningUserID = OwningUserID;
-    if (ProjectName != null) project.ProjectName = ProjectName;
+    const newProject = new Project(
+        null, // ProjectID will be auto-generated
+        OwningUserID,
+        ProjectName,
+        new Date(),
+    );
 
-    await project.save();
-    res.json(project);
-  } catch (error) {
-    console.error(`Error updating project with ID ${projectId}:`, error);
-    res.status(500).send('Internal server error');
-  }
+    try {
+        await newProject.save();
+        const location = `${req.protocol}://${req.get("host")}${req.baseUrl}/${newProject.ProjectID}`;
+        res.status(201).header("Location", location).json(newProject);
+    } catch (error) {
+        console.error("Error creating project:", error);
+        res.status(500).send("Internal server error");
+    }
 });
 
-router.delete('/:id', async (req: Request, res: Response): Promise<void> => {
-  const projectId = parseInt(req.params.id);
-  if (isNaN(projectId)) {
-    res.status(400).send('Invalid project ID');
-    return;
-  }
-
-  try {
-    const result = await Project.deleteById(projectId);
-    if (result) {
-      res.status(204).send();
-    } else {
-      res.status(404).send('Project not found');
+router.put("/:id", async (req: Request, res: Response): Promise<void> => {
+    const projectId = parseInt(req.params.id);
+    if (isNaN(projectId)) {
+        res.status(400).send("Invalid project ID");
+        return;
     }
-  } catch (error) {
-    console.error(`Error deleting project with ID ${projectId}:`, error);
-    res.status(500).send('Internal server error');
-  }
+
+    try {
+        const project = await Project.find(projectId);
+        if (!project) {
+            res.status(404).send("Project not found");
+            return;
+        }
+
+        const { OwningUserID, ProjectName } = req.body;
+
+        if (OwningUserID != null) project.OwningUserID = OwningUserID;
+        if (ProjectName != null) project.ProjectName = ProjectName;
+
+        await project.save();
+        res.json(project);
+    } catch (error) {
+        console.error(`Error updating project with ID ${projectId}:`, error);
+        res.status(500).send("Internal server error");
+    }
+});
+
+router.delete("/:id", async (req: Request, res: Response): Promise<void> => {
+    const projectId = parseInt(req.params.id);
+    if (isNaN(projectId)) {
+        res.status(400).send("Invalid project ID");
+        return;
+    }
+
+    try {
+        const result = await Project.deleteById(projectId);
+        if (result) {
+            res.status(204).send();
+        } else {
+            res.status(404).send("Project not found");
+        }
+    } catch (error) {
+        console.error(`Error deleting project with ID ${projectId}:`, error);
+        res.status(500).send("Internal server error");
+    }
 });
 
 export default router;

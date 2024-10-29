@@ -1,5 +1,5 @@
-import pool from '../db.js';
-import type { RowDataPacket } from 'mysql2';
+import pool from "../db.js";
+import type { RowDataPacket } from "mysql2";
 
 export class Project {
     private _isDirty: boolean = false; // Track if the record needs saving
@@ -9,59 +9,89 @@ export class Project {
     private _projectName: string;
     private _creationDate: Date;
 
-    constructor(ProjectID: number | null, OwningUserID: number, ProjectName: string, CreationDate: Date) {
+    constructor(
+        ProjectID: number | null,
+        OwningUserID: number,
+        ProjectName: string,
+        CreationDate: Date,
+    ) {
         this.ProjectID = ProjectID;
         this._owningUserID = OwningUserID;
         this._projectName = ProjectName;
         this._creationDate = CreationDate;
     }
-    toJSON():string
-    {
+    toJSON(): string {
         return JSON.stringify({
             ProjectID: this.ProjectID,
             OwningUserID: this.OwningUserID,
             ProjectName: this._projectName,
-            CreationDate: this._creationDate
+            CreationDate: this._creationDate,
         });
     }
 
     static async find(ProjectID: number): Promise<Project | null> {
         try {
             const [rows] = await pool.query<RowDataPacket[]>(
-                'SELECT * FROM Projects WHERE project_id = ?',
-                [ProjectID]
+                "SELECT * FROM Projects WHERE project_id = ?",
+                [ProjectID],
             );
 
             if (rows.length === 0) return null;
-            
-            const { OwningUserID, ProjectName, CreationDate } = rows[0] as { OwningUserID: number, ProjectName: string, CreationDate: Date };
-            return new Project(ProjectID, OwningUserID, ProjectName, new Date(CreationDate));
+
+            const { OwningUserID, ProjectName, CreationDate } = rows[0] as {
+                OwningUserID: number;
+                ProjectName: string;
+                CreationDate: Date;
+            };
+            return new Project(
+                ProjectID,
+                OwningUserID,
+                ProjectName,
+                new Date(CreationDate),
+            );
         } catch (error) {
-            console.error(`Error fetching Project with ID ${ProjectID}:`, error);
+            console.error(
+                `Error fetching Project with ID ${ProjectID}:`,
+                error,
+            );
             return null;
         }
     }
 
-      // Find all projects with pagination
-    static async findAll(limit: number, offset: number): Promise<{ projects: Project[]; total: number }> {
-      try {
-        // Get total count
-        const [countRows] = await pool.query<RowDataPacket[]>('SELECT COUNT(*) as total FROM Projects');
-        const total = countRows[0].total;
+    // Find all projects with pagination
+    static async findAll(
+        limit: number,
+        offset: number,
+    ): Promise<{ projects: Project[]; total: number }> {
+        try {
+            // Get total count
+            const [countRows] = await pool.query<RowDataPacket[]>(
+                "SELECT COUNT(*) as total FROM Projects",
+            );
+            const total = countRows[0].total;
 
-        // Get projects with limit and offset
-        const [rows] = await pool.query<RowDataPacket[]>('SELECT * FROM Projects LIMIT ? OFFSET ?', [limit, offset]);
+            // Get projects with limit and offset
+            const [rows] = await pool.query<RowDataPacket[]>(
+                "SELECT * FROM Projects LIMIT ? OFFSET ?",
+                [limit, offset],
+            );
 
-        const projects = rows.map(row => {
-          const { ProjectID, OwningUserID, ProjectName, CreationDate } = row;
-          return new Project(ProjectID, OwningUserID, ProjectName, new Date(CreationDate));
-        });
+            const projects = rows.map((row) => {
+                const { ProjectID, OwningUserID, ProjectName, CreationDate } =
+                    row;
+                return new Project(
+                    ProjectID,
+                    OwningUserID,
+                    ProjectName,
+                    new Date(CreationDate),
+                );
+            });
 
-        return { projects, total };
-      } catch (error) {
-        console.error('Error fetching projects:', error);
-        throw error;
-      }
+            return { projects, total };
+        } catch (error) {
+            console.error("Error fetching projects:", error);
+            throw error;
+        }
     }
     // Save method to insert or update a project if it's dirty
     async save(): Promise<Project> {
@@ -70,14 +100,19 @@ export class Project {
         if (this.ProjectID) {
             // Update existing project
             await pool.query(
-                'UPDATE Project SET OwningUserID = ?, ProjectName = ?, CreationDate = ? WHERE ProjectID = ?',
-                [this._owningUserID, this._projectName, this._creationDate, this.ProjectID]
+                "UPDATE Project SET OwningUserID = ?, ProjectName = ?, CreationDate = ? WHERE ProjectID = ?",
+                [
+                    this._owningUserID,
+                    this._projectName,
+                    this._creationDate,
+                    this.ProjectID,
+                ],
             );
         } else {
             // Insert new project and get the ID
             const [result]: any = await pool.query(
-                'INSERT INTO Project (OwningUserID, ProjectName, CreationDate) VALUES (?, ?, ?)',
-                [this._owningUserID, this._projectName, this._creationDate]
+                "INSERT INTO Project (OwningUserID, ProjectName, CreationDate) VALUES (?, ?, ?)",
+                [this._owningUserID, this._projectName, this._creationDate],
             );
             this.ProjectID = result.insertId;
         }
@@ -88,20 +123,23 @@ export class Project {
     static async deleteById(id: number): Promise<boolean> {
         try {
             // Check if file exists
-            const [rows] = await pool.query<RowDataPacket[]>('SELECT * FROM Project WHERE project_id = ?', [id]);
-            
+            const [rows] = await pool.query<RowDataPacket[]>(
+                "SELECT * FROM Project WHERE project_id = ?",
+                [id],
+            );
+
             if (rows.length === 0) {
                 // Return false if the user does not exist
                 return false;
             }
-    
+
             // Proceed to delete the user
-            await pool.query('DELETE FROM Project WHERE project_id = ?', [id]);
+            await pool.query("DELETE FROM Project WHERE project_id = ?", [id]);
             return true;
         } catch (error) {
             // Log the error for debugging
-            console.error('Error deleting file by ID:', error);
-            
+            console.error("Error deleting file by ID:", error);
+
             // Return false in case of an error
             return false;
         }
@@ -111,7 +149,7 @@ export class Project {
     }
     set OwningUserID(value: number) {
         if (value === this._owningUserID) return;
-        
+
         this._owningUserID = value;
         this._isDirty = true;
     }
@@ -121,7 +159,7 @@ export class Project {
     }
     set ProjectName(value: string) {
         if (value === this._projectName) return;
-        
+
         this._projectName = value;
         this._isDirty = true;
     }
@@ -131,11 +169,10 @@ export class Project {
     }
     set CreationDate(value: Date) {
         if (value === this._creationDate) return;
-        
+
         this._creationDate = value;
         this._isDirty = true;
     }
-
 }
 export class ProjectFile {
     private _isDirty: boolean = false;
@@ -147,7 +184,14 @@ export class ProjectFile {
     private _isDirectory: boolean;
     private _creationDate: Date;
 
-    constructor(FileID: number | null, ProjectID: number, ParentDirectory: number | null, FileName: string, IsDirectory: boolean, CreationDate: Date) {
+    constructor(
+        FileID: number | null,
+        ProjectID: number,
+        ParentDirectory: number | null,
+        FileName: string,
+        IsDirectory: boolean,
+        CreationDate: Date,
+    ) {
         this.FileID = FileID;
         this._projectID = ProjectID;
         this._parentDirectory = ParentDirectory;
@@ -162,53 +206,90 @@ export class ProjectFile {
             ParentDirectory: this._parentDirectory,
             FileName: this._fileName,
             IsDirectory: this._isDirectory,
-            CreationDate: this._creationDate
+            CreationDate: this._creationDate,
         });
     }
 
     static async find(FileID: number): Promise<ProjectFile | null> {
         try {
             const [rows] = await pool.query<RowDataPacket[]>(
-                'SELECT * FROM ProjectFiles WHERE FileID = ?',
-                [FileID]
+                "SELECT * FROM ProjectFiles WHERE FileID = ?",
+                [FileID],
             );
 
             if (rows.length === 0) return null;
 
-            const { ProjectID, ParentDirectory, FileName, IsDirectory, CreationDate } = rows[0] as { ProjectID: number, ParentDirectory: number | null, FileName: string, IsDirectory: boolean, CreationDate: Date };
-            return new ProjectFile(FileID, ProjectID, ParentDirectory, FileName, !!IsDirectory, new Date(CreationDate));
+            const {
+                ProjectID,
+                ParentDirectory,
+                FileName,
+                IsDirectory,
+                CreationDate,
+            } = rows[0] as {
+                ProjectID: number;
+                ParentDirectory: number | null;
+                FileName: string;
+                IsDirectory: boolean;
+                CreationDate: Date;
+            };
+            return new ProjectFile(
+                FileID,
+                ProjectID,
+                ParentDirectory,
+                FileName,
+                !!IsDirectory,
+                new Date(CreationDate),
+            );
         } catch (error) {
-            console.error(`Error fetching ProjectFile with ID ${FileID}:`, error);
+            console.error(
+                `Error fetching ProjectFile with ID ${FileID}:`,
+                error,
+            );
             return null;
         }
     }
     // Find all project files with pagination
-    static async findAll(limit: number, offset: number): Promise<{ files: ProjectFile[]; total: number }> {
-      try {
-        // Get total count
-        const [countRows] = await pool.query<RowDataPacket[]>('SELECT COUNT(*) as total FROM ProjectFiles');
-        const total = countRows[0].total;
+    static async findAll(
+        limit: number,
+        offset: number,
+    ): Promise<{ files: ProjectFile[]; total: number }> {
+        try {
+            // Get total count
+            const [countRows] = await pool.query<RowDataPacket[]>(
+                "SELECT COUNT(*) as total FROM ProjectFiles",
+            );
+            const total = countRows[0].total;
 
-        // Get files with limit and offset
-        const [rows] = await pool.query<RowDataPacket[]>('SELECT * FROM ProjectFiles LIMIT ? OFFSET ?', [limit, offset]);
+            // Get files with limit and offset
+            const [rows] = await pool.query<RowDataPacket[]>(
+                "SELECT * FROM ProjectFiles LIMIT ? OFFSET ?",
+                [limit, offset],
+            );
 
-        const files = rows.map(row => {
-          const { FileID, ProjectID, ParentDirectory, FileName, IsDirectory, CreationDate } = row;
-          return new ProjectFile(
-            FileID,
-            ProjectID,
-            ParentDirectory,
-            FileName,
-            IsDirectory,
-            new Date(CreationDate)
-          );
-        });
+            const files = rows.map((row) => {
+                const {
+                    FileID,
+                    ProjectID,
+                    ParentDirectory,
+                    FileName,
+                    IsDirectory,
+                    CreationDate,
+                } = row;
+                return new ProjectFile(
+                    FileID,
+                    ProjectID,
+                    ParentDirectory,
+                    FileName,
+                    IsDirectory,
+                    new Date(CreationDate),
+                );
+            });
 
-        return { files, total };
-      } catch (error) {
-        console.error('Error fetching project files:', error);
-        throw error;
-      }
+            return { files, total };
+        } catch (error) {
+            console.error("Error fetching project files:", error);
+            throw error;
+        }
     }
     async save(): Promise<ProjectFile> {
         if (!this._isDirty) return this;
@@ -216,14 +297,27 @@ export class ProjectFile {
         if (this.FileID) {
             // Update existing file
             await pool.query(
-                'UPDATE ProjectFiles SET ProjectID = ?, ParentDirectory = ?, FileName = ?, IsDirectory = ?, CreationDate = ? WHERE FileID = ?',
-                [this._projectID, this._parentDirectory, this._fileName, this._isDirectory, this._creationDate, this.FileID]
+                "UPDATE ProjectFiles SET ProjectID = ?, ParentDirectory = ?, FileName = ?, IsDirectory = ?, CreationDate = ? WHERE FileID = ?",
+                [
+                    this._projectID,
+                    this._parentDirectory,
+                    this._fileName,
+                    this._isDirectory,
+                    this._creationDate,
+                    this.FileID,
+                ],
             );
         } else {
             // Insert new file and get the ID
             const [result]: any = await pool.query(
-                'INSERT INTO ProjectFiles (ProjectID, ParentDirectory, FileName, IsDirectory, CreationDate) VALUES (?, ?, ?, ?, ?)',
-                [this._projectID, this._parentDirectory, this._fileName, this._isDirectory, this._creationDate]
+                "INSERT INTO ProjectFiles (ProjectID, ParentDirectory, FileName, IsDirectory, CreationDate) VALUES (?, ?, ?, ?, ?)",
+                [
+                    this._projectID,
+                    this._parentDirectory,
+                    this._fileName,
+                    this._isDirectory,
+                    this._creationDate,
+                ],
             );
             this.FileID = result.insertId;
         }
@@ -234,20 +328,25 @@ export class ProjectFile {
     static async deleteById(id: number): Promise<boolean> {
         try {
             // Check if file exists
-            const [rows] = await pool.query<RowDataPacket[]>('SELECT * FROM ProjectFiles WHERE file_id = ?', [id]);
-            
+            const [rows] = await pool.query<RowDataPacket[]>(
+                "SELECT * FROM ProjectFiles WHERE file_id = ?",
+                [id],
+            );
+
             if (rows.length === 0) {
                 // Return false if the user does not exist
                 return false;
             }
-    
+
             // Proceed to delete the user
-            await pool.query('DELETE FROM ProjectFiles WHERE file_id = ?', [id]);
+            await pool.query("DELETE FROM ProjectFiles WHERE file_id = ?", [
+                id,
+            ]);
             return true;
         } catch (error) {
             // Log the error for debugging
-            console.error('Error deleting file by ID:', error);
-            
+            console.error("Error deleting file by ID:", error);
+
             // Return false in case of an error
             return false;
         }
@@ -267,7 +366,7 @@ export class ProjectFile {
     }
     set ParentDirectory(value: number | null) {
         if (value === this._parentDirectory) return;
-        
+
         this._parentDirectory = value;
         this._isDirty = true;
     }

@@ -1,7 +1,7 @@
 // routes/projectfile.ts
-import { Router, Request, Response } from 'express';
-import { ProjectFile } from '../models/files_models.js';
-import { paginate } from '../middleware/pagination.js';
+import { Router, Request, Response } from "express";
+import { ProjectFile } from "../models/files_models.js";
+import { paginate } from "../middleware/pagination.js";
 
 const router = Router();
 
@@ -233,138 +233,142 @@ const router = Router();
  *         description: Invalid input
  */
 
-router.get('/', paginate, async (req: Request, res: Response): Promise<void> => {
-  const { limit, offset } = (req as any).pagination;
+router.get(
+    "/",
+    paginate,
+    async (req: Request, res: Response): Promise<void> => {
+        const { limit, offset } = (req as any).pagination;
 
-  try {
-    // Fetch project files with pagination
-    const { files, total } = await ProjectFile.findAll(limit, offset);
+        try {
+            // Fetch project files with pagination
+            const { files, total } = await ProjectFile.findAll(limit, offset);
 
-    // Generate HATEOAS links
-    const baseUrl = `${req.protocol}://${req.get('host')}${req.baseUrl}`;
-    const links: any = {
-      self: `${baseUrl}?limit=${limit}&offset=${offset}`,
-      first: `${baseUrl}?limit=${limit}&offset=0`,
-      last: `${baseUrl}?limit=${limit}&offset=${Math.floor((total - 1) / limit) * limit}`,
-    };
+            // Generate HATEOAS links
+            const baseUrl = `${req.protocol}://${req.get("host")}${req.baseUrl}`;
+            const links: any = {
+                self: `${baseUrl}?limit=${limit}&offset=${offset}`,
+                first: `${baseUrl}?limit=${limit}&offset=0`,
+                last: `${baseUrl}?limit=${limit}&offset=${Math.floor((total - 1) / limit) * limit}`,
+            };
 
-    // Conditionally add 'next' link if the offset is within range
-    if (offset + limit < total) {
-      links.next = `${baseUrl}?limit=${limit}&offset=${offset + limit}`;
+            // Conditionally add 'next' link if the offset is within range
+            if (offset + limit < total) {
+                links.next = `${baseUrl}?limit=${limit}&offset=${offset + limit}`;
+            }
+
+            // Conditionally add 'prev' link if the offset is within range
+            if (offset - limit >= 0) {
+                links.prev = `${baseUrl}?limit=${limit}&offset=${offset - limit}`;
+            }
+
+            res.json({
+                total,
+                limit,
+                offset,
+                data: files,
+                links,
+            });
+        } catch (error) {
+            console.error("Error fetching project files:", error);
+            res.status(500).send("Internal server error");
+        }
+    },
+);
+
+router.get("/:id", async (req: Request, res: Response): Promise<void> => {
+    const fileId = parseInt(req.params.id);
+    if (isNaN(fileId)) {
+        res.status(400).send("Invalid project file ID");
+        return;
     }
 
-    // Conditionally add 'prev' link if the offset is within range
-    if (offset - limit >= 0) {
-      links.prev = `${baseUrl}?limit=${limit}&offset=${offset - limit}`;
+    try {
+        const file = await ProjectFile.find(fileId);
+        if (!file) {
+            res.status(404).send("Project file not found");
+            return;
+        }
+        res.json(file);
+    } catch (error) {
+        console.error(`Error fetching project file with ID ${fileId}:`, error);
+        res.status(500).send("Internal server error");
     }
-
-    res.json({
-      total,
-      limit,
-      offset,
-      data: files,
-      links,
-    });
-  } catch (error) {
-    console.error('Error fetching project files:', error);
-    res.status(500).send('Internal server error');
-  }
 });
 
-router.get('/:id', async (req: Request, res: Response): Promise<void> => {
-  const fileId = parseInt(req.params.id);
-  if (isNaN(fileId)) {
-    res.status(400).send('Invalid project file ID');
-    return;
-  }
-
-  try {
-    const file = await ProjectFile.find(fileId);
-    if (!file) {
-      res.status(404).send('Project file not found');
-      return;
-    }
-    res.json(file);
-  } catch (error) {
-    console.error(`Error fetching project file with ID ${fileId}:`, error);
-    res.status(500).send('Internal server error');
-  }
-});
-
-router.post('/', async (req: Request, res: Response): Promise<void> => {
-  const { ProjectID, ParentDirectory, FileName, IsDirectory } = req.body;
-  if (ProjectID == null || FileName == null || IsDirectory == null) {
-    res.status(400).send('Missing required fields');
-    return;
-  }
-
-  const newFile = new ProjectFile(
-    null, // FileID will be auto-generated
-    ProjectID,
-    ParentDirectory || null,
-    FileName,
-    IsDirectory,
-    new Date()
-  );
-
-  try {
-    await newFile.save();
-    const location = `${req.protocol}://${req.get('host')}${req.baseUrl}/${newFile.FileID}`;
-    res.status(201)
-      .header('Location', location)
-      .json(newFile);
-  } catch (error) {
-    console.error('Error creating project file:', error);
-    res.status(500).send('Internal server error');
-  }
-});
-
-router.put('/:id', async (req: Request, res: Response): Promise<void> => {
-  const fileId = parseInt(req.params.id);
-  if (isNaN(fileId)) {
-    res.status(400).send('Invalid project file ID');
-    return;
-  }
-
-  try {
-    const file = await ProjectFile.find(fileId);
-    if (!file) {
-      res.status(404).send('Project file not found');
-      return;
+router.post("/", async (req: Request, res: Response): Promise<void> => {
+    const { ProjectID, ParentDirectory, FileName, IsDirectory } = req.body;
+    if (ProjectID == null || FileName == null || IsDirectory == null) {
+        res.status(400).send("Missing required fields");
+        return;
     }
 
-    const { ParentDirectory, FileName, IsDirectory } = req.body;
+    const newFile = new ProjectFile(
+        null, // FileID will be auto-generated
+        ProjectID,
+        ParentDirectory || null,
+        FileName,
+        IsDirectory,
+        new Date(),
+    );
 
-    if (ParentDirectory !== undefined) file.ParentDirectory = ParentDirectory;
-    if (FileName != null) file.FileName = FileName;
-    if (IsDirectory != null) file.IsDirectory = IsDirectory;
-
-    await file.save();
-    res.json(file);
-  } catch (error) {
-    console.error(`Error updating project file with ID ${fileId}:`, error);
-    res.status(500).send('Internal server error');
-  }
+    try {
+        await newFile.save();
+        const location = `${req.protocol}://${req.get("host")}${req.baseUrl}/${newFile.FileID}`;
+        res.status(201).header("Location", location).json(newFile);
+    } catch (error) {
+        console.error("Error creating project file:", error);
+        res.status(500).send("Internal server error");
+    }
 });
 
-router.delete('/:id', async (req: Request, res: Response): Promise<void> => {
-  const fileId = parseInt(req.params.id);
-  if (isNaN(fileId)) {
-    res.status(400).send('Invalid project file ID');
-    return;
-  }
-
-  try {
-    const result = await ProjectFile.deleteById(fileId);
-    if (result) {
-      res.status(204).send();
-    } else {
-      res.status(404).send('Project file not found');
+router.put("/:id", async (req: Request, res: Response): Promise<void> => {
+    const fileId = parseInt(req.params.id);
+    if (isNaN(fileId)) {
+        res.status(400).send("Invalid project file ID");
+        return;
     }
-  } catch (error) {
-    console.error(`Error deleting project file with ID ${fileId}:`, error);
-    res.status(500).send('Internal server error');
-  }
+
+    try {
+        const file = await ProjectFile.find(fileId);
+        if (!file) {
+            res.status(404).send("Project file not found");
+            return;
+        }
+
+        const { ParentDirectory, FileName, IsDirectory } = req.body;
+
+        if (ParentDirectory !== undefined)
+            file.ParentDirectory = ParentDirectory;
+        if (FileName != null) file.FileName = FileName;
+        if (IsDirectory != null) file.IsDirectory = IsDirectory;
+
+        await file.save();
+        res.json(file);
+    } catch (error) {
+        console.error(`Error updating project file with ID ${fileId}:`, error);
+        res.status(500).send("Internal server error");
+    }
+});
+
+router.delete("/:id", async (req: Request, res: Response): Promise<void> => {
+    const fileId = parseInt(req.params.id);
+    if (isNaN(fileId)) {
+        res.status(400).send("Invalid project file ID");
+        return;
+    }
+
+    try {
+        const result = await ProjectFile.deleteById(fileId);
+        if (!result) {
+            res.status(404).send("Project file not found");
+            return;
+        }
+
+        res.status(204).send();
+    } catch (error) {
+        console.error(`Error deleting project file with ID ${fileId}:`, error);
+        res.status(500).send("Internal server error");
+    }
 });
 
 export default router;

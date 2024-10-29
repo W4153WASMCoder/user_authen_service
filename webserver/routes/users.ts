@@ -1,7 +1,7 @@
 // routes/user.ts
-import { Router, Request, Response } from 'express';
-import { User } from '../models/user_models.js'; // Adjust the path according to your project structure
-import { paginate } from '../middleware/pagination.js';
+import { Router, Request, Response } from "express";
+import { User } from "../models/user_models.js"; // Adjust the path according to your project structure
+import { paginate } from "../middleware/pagination.js";
 
 const router = Router();
 
@@ -101,43 +101,47 @@ const router = Router();
  *       '500':
  *         description: Internal server error
  */
-router.get('/', paginate, async (req: Request, res: Response): Promise<void> => {
-  const { limit, offset } = (req as any).pagination;
+router.get(
+    "/",
+    paginate,
+    async (req: Request, res: Response): Promise<void> => {
+        const { limit, offset } = (req as any).pagination;
 
-  try {
-    // Fetch users with pagination
-    const { users, total } = await User.findAll({ limit, offset });
+        try {
+            // Fetch users with pagination
+            const { users, total } = await User.findAll({ limit, offset });
 
-    // Generate HATEOAS links
-    const baseUrl = `${req.protocol}://${req.get('host')}${req.baseUrl}`;
-    const links: any = {
-      self: `${baseUrl}?limit=${limit}&offset=${offset}`,
-      first: `${baseUrl}?limit=${limit}&offset=0`,
-      last: `${baseUrl}?limit=${limit}&offset=${Math.floor((total - 1) / limit) * limit}`,
-    };
+            // Generate HATEOAS links
+            const baseUrl = `${req.protocol}://${req.get("host")}${req.baseUrl}`;
+            const links: any = {
+                self: `${baseUrl}?limit=${limit}&offset=${offset}`,
+                first: `${baseUrl}?limit=${limit}&offset=0`,
+                last: `${baseUrl}?limit=${limit}&offset=${Math.floor((total - 1) / limit) * limit}`,
+            };
 
-    // Conditionally add 'next' link if the offset is within range
-    if (offset + limit < total) {
-      links.next = `${baseUrl}?limit=${limit}&offset=${offset + limit}`;
-    }
+            // Conditionally add 'next' link if the offset is within range
+            if (offset + limit < total) {
+                links.next = `${baseUrl}?limit=${limit}&offset=${offset + limit}`;
+            }
 
-    // Conditionally add 'prev' link if the offset is within range
-    if (offset - limit >= 0) {
-      links.prev = `${baseUrl}?limit=${limit}&offset=${offset - limit}`;
-    }
+            // Conditionally add 'prev' link if the offset is within range
+            if (offset - limit >= 0) {
+                links.prev = `${baseUrl}?limit=${limit}&offset=${offset - limit}`;
+            }
 
-    res.json({
-      total,
-      limit,
-      offset,
-      data: users,
-      links,
-    });
-  } catch (error) {
-    console.error('Error fetching users:', error);
-    res.status(500).send('Internal server error');
-  }
-});
+            res.json({
+                total,
+                limit,
+                offset,
+                data: users,
+                links,
+            });
+        } catch (error) {
+            console.error("Error fetching users:", error);
+            res.status(500).send("Internal server error");
+        }
+    },
+);
 
 /**
  * @swagger
@@ -262,92 +266,90 @@ router.get('/', paginate, async (req: Request, res: Response): Promise<void> => 
  *         description: Invalid input
  */
 
-router.get('/:id', async (req: Request, res: Response): Promise<void> => {
-  const userId = parseInt(req.params.id);
-  if (isNaN(userId)) {
-    res.status(400).send('Invalid user ID');
-    return;
-  }
-
-  try {
-    const user = await User.findById(userId);
-    if (!user) {
-      res.status(404).send('User not found');
-      return;
-    }
-    res.json(user);
-  } catch (error) {
-    console.error(`Error fetching user with ID ${userId}:`, error);
-    res.status(500).send('Internal server error');
-  }
-});
-
-router.post('/', async (req: Request, res: Response): Promise<void> => {
-  const { sub, email, name, picture } = req.body;
-  if (!sub || !email || !name || !picture) {
-    res.status(400).send('Missing required fields');
-    return;
-  }
-  try {
-    const user = await User.createOrUpdate({ sub, email, name, picture });
-    const location = `${req.protocol}://${req.get('host')}${req.baseUrl}/${user.UserID}`;
-    res.status(201)
-      .header('Location', location)
-      .json(user);
-  } catch (error) {
-    console.error('Error creating user:', error);
-    res.status(500).send('Internal server error');
-  }
-});
-
-router.put('/:id', async (req: Request, res: Response): Promise<void> => {
-  const userId = parseInt(req.params.id);
-  if (isNaN(userId)) {
-    res.status(400).send('Invalid user ID');
-    return;
-  }
-
-  try {
-    const user = await User.findById(userId);
-    if (!user) {
-      res.status(404).send('User not found');
-      return;
+router.get("/:id", async (req: Request, res: Response): Promise<void> => {
+    const userId = parseInt(req.params.id);
+    if (isNaN(userId)) {
+        res.status(400).send("Invalid user ID");
+        return;
     }
 
-    const { email, name, picture } = req.body;
-
-    if (email !== undefined) user.email = email;
-    if (name !== undefined) user.name = name;
-    if (picture !== undefined) user.picture = picture;
-    user.lastLogin = new Date();
-
-    await user.update();
-
-    res.json(user);
-  } catch (error) {
-    console.error(`Error updating user with ID ${userId}:`, error);
-    res.status(500).send('Internal server error');
-  }
+    try {
+        const user = await User.findById(userId);
+        if (!user) {
+            res.status(404).send("User not found");
+            return;
+        }
+        res.json(user);
+    } catch (error) {
+        console.error(`Error fetching user with ID ${userId}:`, error);
+        res.status(500).send("Internal server error");
+    }
 });
 
-router.delete('/:id', async (req: Request, res: Response): Promise<void> => {
-  const userId = parseInt(req.params.id);
-  if (isNaN(userId)) {
-    res.status(400).send('Invalid user ID');
-    return;
-  }
-
-  try {
-    const result = await User.deleteById(userId);
-    if (result) {
-      res.status(204).send();
-    } else {
-      res.status(404).send('User not found');
+router.post("/", async (req: Request, res: Response): Promise<void> => {
+    const { sub, email, name, picture } = req.body;
+    if (!sub || !email || !name || !picture) {
+        res.status(400).send("Missing required fields");
+        return;
     }
-  } catch (error) {
-    console.error(`Error deleting user with ID ${userId}:`, error);
-    res.status(500).send('Internal server error');
-  }
+    try {
+        const user = await User.createOrUpdate({ sub, email, name, picture });
+        const location = `${req.protocol}://${req.get("host")}${req.baseUrl}/${user.UserID}`;
+        res.status(201).header("Location", location).json(user);
+    } catch (error) {
+        console.error("Error creating user:", error);
+        res.status(500).send("Internal server error");
+    }
+});
+
+router.put("/:id", async (req: Request, res: Response): Promise<void> => {
+    const userId = parseInt(req.params.id);
+    if (isNaN(userId)) {
+        res.status(400).send("Invalid user ID");
+        return;
+    }
+
+    try {
+        const user = await User.findById(userId);
+        if (!user) {
+            res.status(404).send("User not found");
+            return;
+        }
+
+        const { email, name, picture } = req.body;
+
+        if (email !== undefined) user.email = email;
+        if (name !== undefined) user.name = name;
+        if (picture !== undefined) user.picture = picture;
+        user.lastLogin = new Date();
+
+        await user.update();
+
+        res.json(user);
+    } catch (error) {
+        console.error(`Error updating user with ID ${userId}:`, error);
+        res.status(500).send("Internal server error");
+    }
+});
+
+router.delete("/:id", async (req: Request, res: Response): Promise<void> => {
+    const userId = parseInt(req.params.id);
+    if (isNaN(userId)) {
+        res.status(400).send("Invalid user ID");
+        return;
+    }
+
+    try {
+        const result = await User.deleteById(userId);
+        if (result) {
+            res.status(204).send();
+        } else {
+            res.status(404).send("User not found");
+        }
+    } catch (error) {
+        console.error(`Error deleting user with ID ${userId}:`, error);
+        res.status(500).send("Internal server error");
+    }
 });
 
 export default router;

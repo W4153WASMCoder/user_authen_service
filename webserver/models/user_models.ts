@@ -1,5 +1,5 @@
-import pool from '../db.js';
-import type { RowDataPacket } from 'mysql2';
+import pool from "../db.js";
+import type { RowDataPacket } from "mysql2";
 
 export class User {
     UserID: number | null;
@@ -9,7 +9,14 @@ export class User {
     picture: string;
     lastLogin: Date;
 
-    constructor(UserID: number | null, sub: string, email: string, name: string, picture: string, lastLogin: Date) {
+    constructor(
+        UserID: number | null,
+        sub: string,
+        email: string,
+        name: string,
+        picture: string,
+        lastLogin: Date,
+    ) {
         this.UserID = UserID;
         this.sub = sub;
         this.email = email;
@@ -19,13 +26,14 @@ export class User {
     }
     async update(): Promise<void> {
         try {
-          if (!this.UserID) 
-            throw new Error('Cannot update a user without UserID');
+            if (!this.UserID)
+                throw new Error("Cannot update a user without UserID");
         } catch (error) {
-          console.error('Error updating user:', error);
-          throw error;
+            console.error("Error updating user:", error);
+            throw error;
         }
-        const { UserID, sub, email, name, picture, lastLogin} = await User.createOrUpdate(this);
+        const { UserID, sub, email, name, picture, lastLogin } =
+            await User.createOrUpdate(this);
 
         this.UserID = UserID;
         this.sub = sub;
@@ -37,55 +45,62 @@ export class User {
     static async deleteById(id: number): Promise<boolean> {
         try {
             // Check if user exists
-            const [rows] = await pool.query<RowDataPacket[]>('SELECT * FROM Users WHERE user_id = ?', [id]);
-            
+            const [rows] = await pool.query<RowDataPacket[]>(
+                "SELECT * FROM Users WHERE user_id = ?",
+                [id],
+            );
+
             if (rows.length === 0) {
                 // Return false if the user does not exist
                 return false;
             }
-    
+
             // Proceed to delete the user
-            await pool.query('DELETE FROM Users WHERE user_id = ?', [id]);
+            await pool.query("DELETE FROM Users WHERE user_id = ?", [id]);
             return true;
         } catch (error) {
             // Log the error for debugging
-            console.error('Error deleting user by ID:', error);
-            
+            console.error("Error deleting user by ID:", error);
+
             // Return false in case of an error
             return false;
         }
     }
 
     // Create or update user based on OpenID Connect information
-    static async createOrUpdate(userData: { sub: string; email: string; name: string; picture: string; }): Promise<User> {
+    static async createOrUpdate(userData: {
+        sub: string;
+        email: string;
+        name: string;
+        picture: string;
+    }): Promise<User> {
         try {
             const { sub, email, name, picture } = userData;
 
             // Check if user exists
-            const [rows] = await pool.query<RowDataPacket[]>('SELECT * FROM Users WHERE sub = ?', [sub]);
+            const [rows] = await pool.query<RowDataPacket[]>(
+                "SELECT * FROM Users WHERE sub = ?",
+                [sub],
+            );
             if (rows.length > 0) {
                 // User exists, update their info
                 const { UserID } = rows[0] as { UserID: number };
-                await pool.query('UPDATE Users SET email = ?, name = ?, picture = ?, lastLogin = ? WHERE user_id = ?', [
-                    email,
-                    name,
-                    picture,
-                    new Date(),
-                    UserID
-                ]);
+                await pool.query(
+                    "UPDATE Users SET email = ?, name = ?, picture = ?, lastLogin = ? WHERE user_id = ?",
+                    [email, name, picture, new Date(), UserID],
+                );
                 return new User(UserID, sub, email, name, picture, new Date());
             }
-                
+
             // User doesn't exist, create a new record
             const [result]: any = await pool.query(
-                'INSERT INTO Users (sub, email, name, picture, lastLogin) VALUES (?, ?, ?, ?, ?)',
-                [sub, email, name, picture, new Date()]
+                "INSERT INTO Users (sub, email, name, picture, lastLogin) VALUES (?, ?, ?, ?, ?)",
+                [sub, email, name, picture, new Date()],
             );
             const UserID = result.insertId;
             return new User(UserID, sub, email, name, picture, new Date());
-
         } catch (error) {
-            console.error('Error creating or updating user:', error);
+            console.error("Error creating or updating user:", error);
             throw error;
         }
     }
@@ -93,10 +108,26 @@ export class User {
     // Find user by UserID
     static async findById(UserID: number): Promise<User | null> {
         try {
-            const [rows] = await pool.query<RowDataPacket[]>('SELECT * FROM Users WHERE user_id = ?', [UserID]);
+            const [rows] = await pool.query<RowDataPacket[]>(
+                "SELECT * FROM Users WHERE user_id = ?",
+                [UserID],
+            );
             if (rows.length > 0) {
-                const { sub, email, name, picture, lastLogin } = rows[0] as { sub: string; email: string; name: string; picture: string; lastLogin: Date };
-                return new User(UserID, sub, email, name, picture, new Date(lastLogin));
+                const { sub, email, name, picture, lastLogin } = rows[0] as {
+                    sub: string;
+                    email: string;
+                    name: string;
+                    picture: string;
+                    lastLogin: Date;
+                };
+                return new User(
+                    UserID,
+                    sub,
+                    email,
+                    name,
+                    picture,
+                    new Date(lastLogin),
+                );
             }
 
             return null;
@@ -104,28 +135,46 @@ export class User {
             console.error(`Error fetching User with ID ${UserID}:`, error);
             return null;
         }
-    }  
-    
+    }
+
     // Fetch users with pagination
-    static async findAll({ limit, offset }: { limit: number; offset: number }): Promise<{ users: User[]; total: number }> {
-      try {
-        // Get total count
-        const [countRows] = await pool.query<RowDataPacket[]>('SELECT COUNT(*) as total FROM Users');
-        const total = countRows[0].total;
-  
-        // Get users with limit and offset
-        const [rows] = await pool.query<RowDataPacket[]>('SELECT * FROM Users LIMIT ? OFFSET ?', [limit, offset]);
-  
-        const users = rows.map(row => {
-          const { UserID, sub, email, name, picture, lastLogin } = row;
-          return new User(UserID, sub, email, name, picture, new Date(lastLogin));
-        });
-  
-        return { users, total };
-      } catch (error) {
-        console.error('Error fetching users:', error);
-        throw error;
-      }
+    static async findAll({
+        limit,
+        offset,
+    }: {
+        limit: number;
+        offset: number;
+    }): Promise<{ users: User[]; total: number }> {
+        try {
+            // Get total count
+            const [countRows] = await pool.query<RowDataPacket[]>(
+                "SELECT COUNT(*) as total FROM Users",
+            );
+            const total = countRows[0].total;
+
+            // Get users with limit and offset
+            const [rows] = await pool.query<RowDataPacket[]>(
+                "SELECT * FROM Users LIMIT ? OFFSET ?",
+                [limit, offset],
+            );
+
+            const users = rows.map((row) => {
+                const { UserID, sub, email, name, picture, lastLogin } = row;
+                return new User(
+                    UserID,
+                    sub,
+                    email,
+                    name,
+                    picture,
+                    new Date(lastLogin),
+                );
+            });
+
+            return { users, total };
+        } catch (error) {
+            console.error("Error fetching users:", error);
+            throw error;
+        }
     }
 
     // Convert User to JSON-compatible format
@@ -136,7 +185,7 @@ export class User {
             email: this.email,
             name: this.name,
             picture: this.picture,
-            lastLogin: this.lastLogin
+            lastLogin: this.lastLogin,
         });
     }
 }
@@ -147,7 +196,12 @@ export class ActiveToken {
     TTL: number;
     CreationDate: Date;
 
-    constructor(TokenID: number | null, UserID: number, TTL: number = 3600, CreationDate: Date = new Date()) {
+    constructor(
+        TokenID: number | null,
+        UserID: number,
+        TTL: number = 3600,
+        CreationDate: Date = new Date(),
+    ) {
         this.TokenID = TokenID;
         this.UserID = UserID;
         this.TTL = TTL;
@@ -159,15 +213,15 @@ export class ActiveToken {
         if (this.TokenID) {
             // Update an existing token
             await pool.query(
-                'UPDATE ActiveTokens SET UserID = ?, TTL = ?, CreationDate = ? WHERE token_id = ?',
-                [this.UserID, this.TTL, this.CreationDate, this.TokenID]
+                "UPDATE ActiveTokens SET UserID = ?, TTL = ?, CreationDate = ? WHERE token_id = ?",
+                [this.UserID, this.TTL, this.CreationDate, this.TokenID],
             );
             return this;
         }
         // Insert a new token
         const [result]: any = await pool.query(
-            'INSERT INTO ActiveTokens (UserID, TTL, CreationDate) VALUES (?, ?, ?)',
-            [this.UserID, this.TTL, this.CreationDate]
+            "INSERT INTO ActiveTokens (UserID, TTL, CreationDate) VALUES (?, ?, ?)",
+            [this.UserID, this.TTL, this.CreationDate],
         );
         this.TokenID = result.insertId; // MySQL returns the new ID
         return this;
@@ -175,10 +229,17 @@ export class ActiveToken {
 
     // Find a token by its TokenID
     static async findById(TokenID: number): Promise<ActiveToken | null> {
-        const [rows] = await pool.query<RowDataPacket[]>('SELECT * FROM ActiveTokens WHERE token_id = ?', [TokenID]);
+        const [rows] = await pool.query<RowDataPacket[]>(
+            "SELECT * FROM ActiveTokens WHERE token_id = ?",
+            [TokenID],
+        );
         if (rows.length === 0) return null;
-        
-        const { UserID, TTL, CreationDate } = rows[0] as { UserID: number; TTL: number; CreationDate: Date };
+
+        const { UserID, TTL, CreationDate } = rows[0] as {
+            UserID: number;
+            TTL: number;
+            CreationDate: Date;
+        };
         return new ActiveToken(TokenID, UserID, TTL, new Date(CreationDate));
     }
 
@@ -189,34 +250,47 @@ export class ActiveToken {
         return currentTime - creationTime < this.TTL * 1000;
     }
 
-    static async findAll(limit: number, offset: number): Promise<{ tokens: ActiveToken[]; total: number }> {
+    static async findAll(
+        limit: number,
+        offset: number,
+    ): Promise<{ tokens: ActiveToken[]; total: number }> {
         try {
-          // Get total count
-          const [countRows] = await pool.query<RowDataPacket[]>('SELECT COUNT(*) as total FROM ActiveTokens');
-          const total = countRows[0].total;
-    
-          // Get tokens with limit and offset
-          const [rows] = await pool.query<RowDataPacket[]>('SELECT * FROM ActiveTokens LIMIT ? OFFSET ?', [limit, offset]);
-    
-          const tokens = rows.map(row => {
-            const { TokenID, UserID, TTL, CreationDate } = row;
-            return new ActiveToken(TokenID, UserID, TTL, new Date(CreationDate));
-          });
-    
-          return { tokens, total };
-        } catch (error) {
-          console.error('Error fetching active tokens:', error);
-          throw error;
-        }
-      }
+            // Get total count
+            const [countRows] = await pool.query<RowDataPacket[]>(
+                "SELECT COUNT(*) as total FROM ActiveTokens",
+            );
+            const total = countRows[0].total;
 
-      // Convert ActiveToken instance to JSON-compatible format
-      toJSON(): string {
-          return JSON.stringify({
-              TokenID: this.TokenID,
-              UserID: this.UserID,
-              TTL: this.TTL,
-              CreationDate: this.CreationDate
-          });
-      }
+            // Get tokens with limit and offset
+            const [rows] = await pool.query<RowDataPacket[]>(
+                "SELECT * FROM ActiveTokens LIMIT ? OFFSET ?",
+                [limit, offset],
+            );
+
+            const tokens = rows.map((row) => {
+                const { TokenID, UserID, TTL, CreationDate } = row;
+                return new ActiveToken(
+                    TokenID,
+                    UserID,
+                    TTL,
+                    new Date(CreationDate),
+                );
+            });
+
+            return { tokens, total };
+        } catch (error) {
+            console.error("Error fetching active tokens:", error);
+            throw error;
+        }
+    }
+
+    // Convert ActiveToken instance to JSON-compatible format
+    toJSON(): string {
+        return JSON.stringify({
+            TokenID: this.TokenID,
+            UserID: this.UserID,
+            TTL: this.TTL,
+            CreationDate: this.CreationDate,
+        });
+    }
 }
