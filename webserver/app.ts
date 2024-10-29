@@ -7,6 +7,8 @@ import fs from 'fs';
 import { generate_routes } from './routes/router.js';
 import project_router from './routes/project.js';
 import project_files_router from './routes/project_files.js';
+import swagger from './swagger.js';
+import type { Express } from 'express'
 
 // Load environment variables from .env file
 dotenv.config();
@@ -24,8 +26,9 @@ app.use(express.static('../'));
 app.use(express.json())
 app.use(express.urlencoded({extended:false}))
 generate_routes(app);
-app.use(project_router);
-app.use(project_files_router);
+app.use('/projects', project_router);
+app.use('/project_files', project_files_router);
+swagger(app as Express);
 //End Middleware definition
 
 //Start Server
