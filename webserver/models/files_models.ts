@@ -59,22 +59,51 @@ export class Project {
     }
 
     // Find all projects with pagination
-    static async findAll(
-        limit: number,
-        offset: number,
-    ): Promise<{ projects: Project[]; total: number }> {
+    static async findAll(options: {
+        limit: number;
+        offset: number;
+        filters?: { ProjectName?: string; OwningUserID?: number };
+        sort?: string;
+        order?: "asc" | "desc";
+    }): Promise<{ projects: Project[]; total: number }> {
+        const {
+            limit,
+            offset,
+            filters = {},
+            sort = "ProjectID",
+            order = "asc",
+        } = options;
+
+        let filterClauses = "";
+        const filterValues: any[] = [];
+
+        if (filters.ProjectName) {
+            filterClauses += " AND ProjectName LIKE ?";
+            filterValues.push(`%${filters.ProjectName}%`);
+        }
+
+        if (filters.OwningUserID !== undefined) {
+            filterClauses += " AND OwningUserID = ?";
+            filterValues.push(filters.OwningUserID);
+        }
+
+        const totalQuery = `SELECT COUNT(*) as total FROM Projects WHERE 1=1${filterClauses}`;
+        const dataQuery = `SELECT * FROM Projects WHERE 1=1${filterClauses} ORDER BY ${sort} ${order} LIMIT ? OFFSET ?`;
+
         try {
             // Get total count
             const [countRows] = await pool.query<RowDataPacket[]>(
-                "SELECT COUNT(*) as total FROM Projects",
+                totalQuery,
+                filterValues,
             );
             const total = countRows[0].total;
 
             // Get projects with limit and offset
-            const [rows] = await pool.query<RowDataPacket[]>(
-                "SELECT * FROM Projects LIMIT ? OFFSET ?",
-                [limit, offset],
-            );
+            const [rows] = await pool.query<RowDataPacket[]>(dataQuery, [
+                ...filterValues,
+                limit,
+                offset,
+            ]);
 
             const projects = rows.map((row) => {
                 const { ProjectID, OwningUserID, ProjectName, CreationDate } =
@@ -249,22 +278,55 @@ export class ProjectFile {
         }
     }
     // Find all project files with pagination
-    static async findAll(
-        limit: number,
-        offset: number,
-    ): Promise<{ files: ProjectFile[]; total: number }> {
+    static async findAll(options: {
+        limit: number;
+        offset: number;
+        filters?: { ProjectID?: number; FileName?: string; IsDirectory?: boolean };
+        sort?: string;
+        order?: 'asc' | 'desc';
+    }): Promise<{ files: ProjectFile[]; total: number }> {
+        const { limit, offset, filters = {}, sort = 'FileID', order = 'asc' } = options;
+
+        let filterClauses = '';
+        const filterValues: any[] = [];
+
+        // Build filter clauses
+        if (filters.ProjectID !== undefined) {
+            filterClauses += ' AND ProjectID = ?';
+            filterValues.push(filters.ProjectID);
+        }
+
+        if (filters.FileName) {
+            filterClauses += ' AND FileName LIKE ?';
+            filterValues.push(`%${filters.FileName}%`);
+        }
+
+        if (filters.IsDirectory !== undefined) {
+            filterClauses += ' AND IsDirectory = ?';
+            filterValues.push(filters.IsDirectory ? 1 : 0);
+        }
+
+        // Validate 'sort' and 'order' parameters to prevent SQL injection
+        const validSortFields = ['FileID', 'FileName', 'CreationDate'];
+        if (!validSortFields.includes(sort)) {
+            throw new Error(`Invalid sort field: ${sort}`);
+        }
+
+        const validOrderValues = ['asc', 'desc'];
+        if (!validOrderValues.includes(order)) {
+            throw new Error(`Invalid order value: ${order}`);
+        }
+
+        const totalQuery = `SELECT COUNT(*) as total FROM ProjectFiles WHERE 1=1${filterClauses}`;
+        const dataQuery = `SELECT * FROM ProjectFiles WHERE 1=1${filterClauses} ORDER BY ${sort} ${order} LIMIT ? OFFSET ?`;
+
         try {
             // Get total count
-            const [countRows] = await pool.query<RowDataPacket[]>(
-                "SELECT COUNT(*) as total FROM ProjectFiles",
-            );
+            const [countRows] = await pool.query<RowDataPacket[]>(totalQuery, filterValues);
             const total = countRows[0].total;
 
-            // Get files with limit and offset
-            const [rows] = await pool.query<RowDataPacket[]>(
-                "SELECT * FROM ProjectFiles LIMIT ? OFFSET ?",
-                [limit, offset],
-            );
+            // Get files with limit, offset, filters, and sorting
+            const [rows] = await pool.query<RowDataPacket[]>(dataQuery, [...filterValues, limit, offset]);
 
             const files = rows.map((row) => {
                 const {
@@ -280,7 +342,7 @@ export class ProjectFile {
                     ProjectID,
                     ParentDirectory,
                     FileName,
-                    IsDirectory,
+                    !!IsDirectory,
                     new Date(CreationDate),
                 );
             });

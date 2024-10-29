@@ -46,10 +46,34 @@ const router = Router();
  * @swagger
  * /projects:
  *   get:
- *     summary: Get a list of projects with pagination
+ *     summary: Get a list of projects with pagination, filtering, and sorting
  *     tags:
  *       - Projects
  *     parameters:
+ *       - in: query
+ *         name: ProjectName
+ *         schema:
+ *           type: string
+ *         description: Filter projects by name
+ *       - in: query
+ *         name: OwningUserID
+ *         schema:
+ *           type: integer
+ *         description: Filter projects by owner user ID
+ *       - in: query
+ *         name: sort
+ *         schema:
+ *           type: string
+ *           enum: [ProjectID, ProjectName, CreationDate]
+ *           default: ProjectID
+ *         description: Field to sort by
+ *       - in: query
+ *         name: order
+ *         schema:
+ *           type: string
+ *           enum: [asc, desc]
+ *           default: asc
+ *         description: Sort order
  *       - in: query
  *         name: limit
  *         schema:
@@ -95,50 +119,84 @@ const router = Router();
  *                       type: string
  *                     last:
  *                       type: string
+ *       '400':
+ *         description: Invalid query parameter
  *       '500':
  *         description: Internal server error
  */
-router.get(
-    "/",
-    paginate,
-    async (req: Request, res: Response): Promise<void> => {
-        const { limit, offset } = (req as any).pagination;
 
-        try {
-            // Fetch projects with pagination
-            const { projects, total } = await Project.findAll(limit, offset);
+router.get("/", paginate, async (req: Request, res: Response): Promise<void> => {
+  const { limit, offset } = (req as any).pagination;
+  const { ProjectName, OwningUserID, sort = "ProjectID", order = "asc" } = req.query;
 
-            // Generate HATEOAS links
-            const baseUrl = `${req.protocol}://${req.get("host")}${req.baseUrl}`;
-            const links: any = {
-                self: `${baseUrl}?limit=${limit}&offset=${offset}`,
-                first: `${baseUrl}?limit=${limit}&offset=0`,
-                last: `${baseUrl}?limit=${limit}&offset=${Math.floor((total - 1) / limit) * limit}`,
-            };
+  // Validate 'order' parameter
+  if (order !== "asc" && order !== "desc") {
+    res.status(400).json({ error: 'Invalid order parameter. Must be "asc" or "desc".' });
+    return;
+  }
 
-            // Conditionally add 'next' link if the offset is within range
-            if (offset + limit < total) {
-                links.next = `${baseUrl}?limit=${limit}&offset=${offset + limit}`;
-            }
+  // Validate 'sort' parameter
+  const validSortFields = ["ProjectID", "ProjectName", "CreationDate"];
+  if (!validSortFields.includes(sort as string)) {
+    res.status(400).json({ error: `Invalid sort parameter. Must be one of ${validSortFields.join(", ")}.` });
+    return;
+  }
 
-            // Conditionally add 'prev' link if the offset is within range
-            if (offset - limit >= 0) {
-                links.prev = `${baseUrl}?limit=${limit}&offset=${offset - limit}`;
-            }
+  try {
+    // Fetch projects with filtering, sorting, and pagination
+    const { projects, total } = await Project.findAll({
+      limit,
+      offset,
+      filters: {
+        ProjectName: ProjectName as string,
+        OwningUserID: OwningUserID ? parseInt(OwningUserID as string, 10) : undefined,
+      },
+      sort: sort as string,
+      order: order as "asc" | "desc",
+    });
 
-            res.json({
-                total,
-                limit,
-                offset,
-                data: projects,
-                links,
-            });
-        } catch (error) {
-            console.error("Error fetching projects:", error);
-            res.status(500).send("Internal server error");
-        }
-    },
-);
+    // Generate HATEOAS links (adjusted to include query parameters)
+    const baseUrl = `${req.protocol}://${req.get("host")}${req.baseUrl}`;
+    const queryParams = new URLSearchParams({
+      ...(req.query as any),
+      limit: limit.toString(),
+      offset: offset.toString(),
+    });
+    const links: any = {
+      self: `${baseUrl}?${queryParams.toString()}`,
+      first: `${baseUrl}?${queryParams.toString().replace(`offset=${offset}`, "offset=0")}`,
+      last: `${baseUrl}?${queryParams.toString().replace(
+        `offset=${offset}`,
+        `offset=${Math.floor((total - 1) / limit) * limit}`
+      )}`,
+    };
+
+    if (offset + limit < total) {
+      links.next = `${baseUrl}?${queryParams.toString().replace(
+        `offset=${offset}`,
+        `offset=${offset + limit}`
+      )}`;
+    }
+
+    if (offset - limit >= 0) {
+      links.prev = `${baseUrl}?${queryParams.toString().replace(
+        `offset=${offset}`,
+        `offset=${offset - limit}`
+      )}`;
+    }
+
+    res.json({
+      total,
+      limit,
+      offset,
+      data: projects,
+      links,
+    });
+  } catch (error) {
+    console.error("Error fetching projects:", error);
+    res.status(500).send("Internal server error");
+  }
+});
 
 /**
  * @swagger
@@ -256,94 +314,94 @@ router.get(
  */
 
 router.get("/:id", async (req: Request, res: Response): Promise<void> => {
-    const projectId = parseInt(req.params.id);
-    if (isNaN(projectId)) {
-        res.status(400).send("Invalid project ID");
-        return;
-    }
+  const projectId = parseInt(req.params.id, 10);
+  if (isNaN(projectId)) {
+    res.status(400).send("Invalid project ID");
+    return;
+  }
 
-    try {
-        const project = await Project.find(projectId);
-        if (!project) {
-            res.status(404).send("Project not found");
-            return;
-        }
-        res.json(project);
-    } catch (error) {
-        console.error(`Error fetching project with ID ${projectId}:`, error);
-        res.status(500).send("Internal server error");
+  try {
+    const project = await Project.find(projectId);
+    if (!project) {
+      res.status(404).send("Project not found");
+      return;
     }
+    res.json(project);
+  } catch (error) {
+    console.error(`Error fetching project with ID ${projectId}:`, error);
+    res.status(500).send("Internal server error");
+  }
 });
 
 router.post("/", async (req: Request, res: Response): Promise<void> => {
-    const { OwningUserID, ProjectName } = req.body;
-    if (OwningUserID == null || ProjectName == null) {
-        res.status(400).send("Missing required fields");
-        return;
-    }
+  const { OwningUserID, ProjectName } = req.body;
+  if (OwningUserID == null || ProjectName == null) {
+    res.status(400).send("Missing required fields");
+    return;
+  }
 
-    const newProject = new Project(
-        null, // ProjectID will be auto-generated
-        OwningUserID,
-        ProjectName,
-        new Date(),
-    );
+  const newProject = new Project(
+    null, // ProjectID will be auto-generated
+    OwningUserID,
+    ProjectName,
+    new Date()
+  );
 
-    try {
-        await newProject.save();
-        const location = `${req.protocol}://${req.get("host")}${req.baseUrl}/${newProject.ProjectID}`;
-        res.status(201).header("Location", location).json(newProject);
-    } catch (error) {
-        console.error("Error creating project:", error);
-        res.status(500).send("Internal server error");
-    }
+  try {
+    await newProject.save();
+    const location = `${req.protocol}://${req.get("host")}${req.baseUrl}/${newProject.ProjectID}`;
+    res.status(201).header("Location", location).json(newProject);
+  } catch (error) {
+    console.error("Error creating project:", error);
+    res.status(500).send("Internal server error");
+  }
 });
 
 router.put("/:id", async (req: Request, res: Response): Promise<void> => {
-    const projectId = parseInt(req.params.id);
-    if (isNaN(projectId)) {
-        res.status(400).send("Invalid project ID");
-        return;
+  const projectId = parseInt(req.params.id, 10);
+  if (isNaN(projectId)) {
+    res.status(400).send("Invalid project ID");
+    return;
+  }
+
+  try {
+    const project = await Project.find(projectId);
+    if (!project) {
+      res.status(404).send("Project not found");
+      return;
     }
 
-    try {
-        const project = await Project.find(projectId);
-        if (!project) {
-            res.status(404).send("Project not found");
-            return;
-        }
+    const { OwningUserID, ProjectName } = req.body;
 
-        const { OwningUserID, ProjectName } = req.body;
+    if (OwningUserID != null) project.OwningUserID = OwningUserID;
+    if (ProjectName != null) project.ProjectName = ProjectName;
 
-        if (OwningUserID != null) project.OwningUserID = OwningUserID;
-        if (ProjectName != null) project.ProjectName = ProjectName;
-
-        await project.save();
-        res.json(project);
-    } catch (error) {
-        console.error(`Error updating project with ID ${projectId}:`, error);
-        res.status(500).send("Internal server error");
-    }
+    await project.save();
+    res.json(project);
+  } catch (error) {
+    console.error(`Error updating project with ID ${projectId}:`, error);
+    res.status(500).send("Internal server error");
+  }
 });
 
 router.delete("/:id", async (req: Request, res: Response): Promise<void> => {
-    const projectId = parseInt(req.params.id);
-    if (isNaN(projectId)) {
-        res.status(400).send("Invalid project ID");
-        return;
-    }
+  const projectId = parseInt(req.params.id, 10);
+  if (isNaN(projectId)) {
+    res.status(400).send("Invalid project ID");
+    return;
+  }
 
-    try {
-        const result = await Project.deleteById(projectId);
-        if (result) {
-            res.status(204).send();
-        } else {
-            res.status(404).send("Project not found");
-        }
-    } catch (error) {
-        console.error(`Error deleting project with ID ${projectId}:`, error);
-        res.status(500).send("Internal server error");
+  try {
+    const result = await Project.deleteById(projectId);
+    if (result) {
+      res.status(204).send();
+    } else {
+      res.status(404).send("Project not found");
     }
+  } catch (error) {
+    console.error(`Error deleting project with ID ${projectId}:`, error);
+    res.status(500).send("Internal server error");
+  }
 });
 
 export default router;
