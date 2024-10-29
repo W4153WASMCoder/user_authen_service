@@ -1,6 +1,6 @@
 // routes/user.ts
 import { Router, Request, Response } from "express";
-import { User } from "../models/user_models.js"; // Adjust the path according to your project structure
+import { User } from "../models/user_models.js";
 import { paginate } from "../middleware/pagination.js";
 
 const router = Router();

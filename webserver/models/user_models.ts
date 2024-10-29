@@ -104,7 +104,6 @@ export class User {
             throw error;
         }
     }
-
     // Find user by UserID
     static async findById(UserID: number): Promise<User | null> {
         try {
@@ -112,25 +111,23 @@ export class User {
                 "SELECT * FROM Users WHERE user_id = ?",
                 [UserID],
             );
-            if (rows.length > 0) {
-                const { sub, email, name, picture, lastLogin } = rows[0] as {
-                    sub: string;
-                    email: string;
-                    name: string;
-                    picture: string;
-                    lastLogin: Date;
-                };
-                return new User(
-                    UserID,
-                    sub,
-                    email,
-                    name,
-                    picture,
-                    new Date(lastLogin),
-                );
-            }
+            if (rows.length > 0) return null;
 
-            return null;
+            const { sub, email, name, picture, lastLogin } = rows[0] as {
+                sub: string;
+                email: string;
+                name: string;
+                picture: string;
+                lastLogin: Date;
+            };
+            return new User(
+                UserID,
+                sub,
+                email,
+                name,
+                picture,
+                new Date(lastLogin),
+            );
         } catch (error) {
             console.error(`Error fetching User with ID ${UserID}:`, error);
             return null;
