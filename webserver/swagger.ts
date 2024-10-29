@@ -2,7 +2,7 @@
 import swaggerJSDoc from 'swagger-jsdoc';
 import swaggerUi from 'swagger-ui-express';
 import { Express } from 'express';
-import * as dotenv from 'dotenv';
+import dotenv from 'dotenv';
 
 // Load environment variables from .env file
 dotenv.config();
