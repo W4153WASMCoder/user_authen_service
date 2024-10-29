@@ -4,7 +4,6 @@ import { ProjectFile } from '../models/files_models.js';
 import { paginate } from '../middleware/pagination.js';
 
 const router = Router();
-
 /**
  * @swagger
  * components:
@@ -48,8 +47,8 @@ const router = Router();
 /**
  * @swagger
  * tags:
- *   name: ProjectFiles
- *   description: API endpoints for project files
+ *   - name: ProjectFiles
+ *     description: API endpoints for project files
  */
 
 /**
@@ -57,7 +56,8 @@ const router = Router();
  * /projectfiles:
  *   get:
  *     summary: Get a list of project files with pagination
- *     tags: [ProjectFiles]
+ *     tags:
+ *       - ProjectFiles
  *     parameters:
  *       - in: query
  *         name: limit
@@ -72,7 +72,7 @@ const router = Router();
  *           default: 0
  *         description: Number of project files to skip
  *     responses:
- *       200:
+ *       '200':
  *         description: A paginated list of project files
  *         content:
  *           application/json:
@@ -104,8 +104,95 @@ const router = Router();
  *                       type: string
  *                     last:
  *                       type: string
- *       500:
+ *       '500':
  *         description: Internal server error
+ */
+
+/**
+ * @swagger
+ * /projectfiles/{id}:
+ *   get:
+ *     summary: Get a project file by ID
+ *     tags:
+ *       - ProjectFiles
+ *     parameters:
+ *       - in: path
+ *         name: id
+ *         required: true
+ *         schema:
+ *           type: integer
+ *         description: The project file ID
+ *     responses:
+ *       '200':
+ *         description: A project file object
+ *         content:
+ *           application/json:
+ *             schema:
+ *               $ref: '#/components/schemas/ProjectFile'
+ *       '404':
+ *         description: Project file not found
+ *   put:
+ *     summary: Update a project file by ID
+ *     tags:
+ *       - ProjectFiles
+ *     parameters:
+ *       - in: path
+ *         name: id
+ *         required: true
+ *         schema:
+ *           type: integer
+ *         description: The project file ID
+ *     requestBody:
+ *       description: Project file object to update
+ *       required: true
+ *       content:
+ *         application/json:
+ *           schema:
+ *             type: object
+ *             properties:
+ *               ParentDirectory:
+ *                 type: integer
+ *                 nullable: true
+ *               FileName:
+ *                 type: string
+ *               IsDirectory:
+ *                 type: boolean
+ *     responses:
+ *       '200':
+ *         description: Project file updated successfully
+ *         content:
+ *           application/json:
+ *             schema:
+ *               $ref: '#/components/schemas/ProjectFile'
+ *       '400':
+ *         description: Invalid input
+ *       '404':
+ *         description: Project file not found
+ */
+
+/**
+ * @swagger
+ * /projectfiles:
+ *   post:
+ *     summary: Create a new project file
+ *     tags:
+ *       - ProjectFiles
+ *     requestBody:
+ *       description: Project file object to create
+ *       required: true
+ *       content:
+ *         application/json:
+ *           schema:
+ *             $ref: '#/components/schemas/ProjectFile'
+ *     responses:
+ *       '201':
+ *         description: Project file created successfully
+ *         content:
+ *           application/json:
+ *             schema:
+ *               $ref: '#/components/schemas/ProjectFile'
+ *       '400':
+ *         description: Invalid input
  */
 
 router.get('/', paginate, async (req: Request, res: Response): Promise<void> => {
@@ -146,103 +233,6 @@ router.get('/', paginate, async (req: Request, res: Response): Promise<void> => 
   }
 });
 
-/**
- * @swagger
- * /projectfiles/{id}:
- *   get:
- *     summary: Get a project file by ID
- *     tags: [ProjectFiles]
- *     parameters:
- *       - in: path
- *         name: id
- *         required: true
- *         schema:
- *           type: integer
- *         description: The project file ID
- *     responses:
- *       200:
- *         description: A project file object
- *         content:
- *           application/json:
- *             schema:
- *               $ref: '#/components/schemas/ProjectFile'
- *       404:
- *         description: Project file not found
- *   put:
- *     summary: Update a project file by ID
- *     tags: [ProjectFiles]
- *     parameters:
- *       - in: path
- *         name: id
- *         required: true
- *         schema:
- *           type: integer
- *         description: The project file ID
- *     requestBody:
- *       description: Project file object to update
- *       required: true
- *       content:
- *         application/json:
- *           schema:
- *             type: object
- *             properties:
- *               ParentDirectory:
- *                 type: integer
- *                 nullable: true
- *               FileName:
- *                 type: string
- *               IsDirectory:
- *                 type: boolean
- *     responses:
- *       200:
- *         description: Project file updated successfully
- *         content:
- *           application/json
- *             schema:
- *               $ref: '#/components/schemas/ProjectFile'
- *       400:
- *         description: Invalid input
- *       404:
- *         description: Project file not found
- */
-
-/**
- * @swagger
- * /projectfiles:
- *   post:
- *     summary: Create a new project file
- *     tags: [ProjectFiles]
- *     requestBody:
- *       description: Project file object to create
- *       required: true
- *       content:
- *         application/json:
- *           schema:
- *             type: object
- *             required:
- *               - ProjectID
- *               - FileName
- *               - IsDirectory
- *             properties:
- *               ProjectID:
- *                 type: integer
- *               ParentDirectory:
- *                 type: integer
- *                 nullable: true
- *               FileName:
- *                 type: string
- *               IsDirectory:
- *                 type: boolean
- *     responses:
- *       201:
- *         description: Project file created successfully
- *         content:
- *           application/json
- *             schema:
- *               $ref: '#/components/schemas/ProjectFile'
- *       400:
- *         description: Invalid input
- */
 
 router.get('/:id', async (req: Request, res: Response): Promise<void> => {
   const fileId = parseInt(req.params.id);
