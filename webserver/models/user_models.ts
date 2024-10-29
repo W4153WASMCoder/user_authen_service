@@ -33,7 +33,29 @@ export class User {
         this.name = name;
         this.picture = picture;
         this.lastLogin = lastLogin;
-      }
+    }
+    static async deleteById(id: number): Promise<boolean> {
+        try {
+            // Check if user exists
+            const [rows] = await pool.query<RowDataPacket[]>('SELECT * FROM Users WHERE user_id = ?', [id]);
+            
+            if (rows.length === 0) {
+                // Return false if the user does not exist
+                return false;
+            }
+    
+            // Proceed to delete the user
+            await pool.query('DELETE FROM Users WHERE user_id = ?', [id]);
+            return true;
+        } catch (error) {
+            // Log the error for debugging
+            console.error('Error deleting user by ID:', error);
+            
+            // Return false in case of an error
+            return false;
+        }
+    }
+
     // Create or update user based on OpenID Connect information
     static async createOrUpdate(userData: { sub: string; email: string; name: string; picture: string; }): Promise<User> {
         try {
@@ -44,7 +66,7 @@ export class User {
             if (rows.length > 0) {
                 // User exists, update their info
                 const { UserID } = rows[0] as { UserID: number };
-                await pool.query('UPDATE Users SET email = ?, name = ?, picture = ?, lastLogin = ? WHERE UserID = ?', [
+                await pool.query('UPDATE Users SET email = ?, name = ?, picture = ?, lastLogin = ? WHERE user_id = ?', [
                     email,
                     name,
                     picture,
@@ -71,7 +93,7 @@ export class User {
     // Find user by UserID
     static async findById(UserID: number): Promise<User | null> {
         try {
-            const [rows] = await pool.query<RowDataPacket[]>('SELECT * FROM Users WHERE UserID = ?', [UserID]);
+            const [rows] = await pool.query<RowDataPacket[]>('SELECT * FROM Users WHERE user_id = ?', [UserID]);
             if (rows.length > 0) {
                 const { sub, email, name, picture, lastLogin } = rows[0] as { sub: string; email: string; name: string; picture: string; lastLogin: Date };
                 return new User(UserID, sub, email, name, picture, new Date(lastLogin));
@@ -137,7 +159,7 @@ export class ActiveToken {
         if (this.TokenID) {
             // Update an existing token
             await pool.query(
-                'UPDATE ActiveTokens SET UserID = ?, TTL = ?, CreationDate = ? WHERE TokenID = ?',
+                'UPDATE ActiveTokens SET UserID = ?, TTL = ?, CreationDate = ? WHERE token_id = ?',
                 [this.UserID, this.TTL, this.CreationDate, this.TokenID]
             );
             return this;
@@ -153,7 +175,7 @@ export class ActiveToken {
 
     // Find a token by its TokenID
     static async findById(TokenID: number): Promise<ActiveToken | null> {
-        const [rows] = await pool.query<RowDataPacket[]>('SELECT * FROM ActiveTokens WHERE TokenID = ?', [TokenID]);
+        const [rows] = await pool.query<RowDataPacket[]>('SELECT * FROM ActiveTokens WHERE token_id = ?', [TokenID]);
         if (rows.length === 0) return null;
         
         const { UserID, TTL, CreationDate } = rows[0] as { UserID: number; TTL: number; CreationDate: Date };
@@ -187,7 +209,7 @@ export class ActiveToken {
           throw error;
         }
       }
-      
+
       // Convert ActiveToken instance to JSON-compatible format
       toJSON(): string {
           return JSON.stringify({

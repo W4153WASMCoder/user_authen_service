@@ -38,8 +38,8 @@ const router = Router();
 /**
  * @swagger
  * tags:
- *   name: Projects
- *   description: API endpoints for projects
+ *   - name: Projects
+ *     description: API endpoints for projects
  */
 
 /**
@@ -47,7 +47,8 @@ const router = Router();
  * /projects:
  *   get:
  *     summary: Get a list of projects with pagination
- *     tags: [Projects]
+ *     tags:
+ *       - Projects
  *     parameters:
  *       - in: query
  *         name: limit
@@ -62,7 +63,7 @@ const router = Router();
  *           default: 0
  *         description: Number of projects to skip
  *     responses:
- *       200:
+ *       '200':
  *         description: A paginated list of projects
  *         content:
  *           application/json:
@@ -94,7 +95,7 @@ const router = Router();
  *                       type: string
  *                     last:
  *                       type: string
- *       500:
+ *       '500':
  *         description: Internal server error
  */
 router.get('/', paginate, async (req: Request, res: Response): Promise<void> => {
@@ -140,7 +141,8 @@ router.get('/', paginate, async (req: Request, res: Response): Promise<void> => 
  * /projects/{id}:
  *   get:
  *     summary: Get a project by ID
- *     tags: [Projects]
+ *     tags:
+ *       - Projects
  *     parameters:
  *       - in: path
  *         name: id
@@ -149,17 +151,18 @@ router.get('/', paginate, async (req: Request, res: Response): Promise<void> => 
  *           type: integer
  *         description: The project ID
  *     responses:
- *       200:
+ *       '200':
  *         description: A project object
  *         content:
  *           application/json:
  *             schema:
  *               $ref: '#/components/schemas/Project'
- *       404:
+ *       '404':
  *         description: Project not found
  *   put:
  *     summary: Update a project by ID
- *     tags: [Projects]
+ *     tags:
+ *       - Projects
  *     parameters:
  *       - in: path
  *         name: id
@@ -180,16 +183,34 @@ router.get('/', paginate, async (req: Request, res: Response): Promise<void> => 
  *               ProjectName:
  *                 type: string
  *     responses:
- *       200:
+ *       '200':
  *         description: Project updated successfully
  *         content:
  *           application/json:
  *             schema:
  *               $ref: '#/components/schemas/Project'
- *       400:
+ *       '400':
  *         description: Invalid input
- *       404:
+ *       '404':
  *         description: Project not found
+ *   delete:
+ *     summary: Delete a project by ID
+ *     tags:
+ *       - Projects
+ *     parameters:
+ *       - in: path
+ *         name: id
+ *         required: true
+ *         schema:
+ *           type: integer
+ *         description: The project ID
+ *     responses:
+ *       '204':
+ *         description: Project deleted successfully
+ *       '404':
+ *         description: Project not found
+ *       '500':
+ *         description: Internal server error
  */
 
 /**
@@ -197,7 +218,8 @@ router.get('/', paginate, async (req: Request, res: Response): Promise<void> => 
  * /projects:
  *   post:
  *     summary: Create a new project
- *     tags: [Projects]
+ *     tags:
+ *       - Projects
  *     requestBody:
  *       description: Project object to create
  *       required: true
@@ -214,13 +236,18 @@ router.get('/', paginate, async (req: Request, res: Response): Promise<void> => 
  *               ProjectName:
  *                 type: string
  *     responses:
- *       201:
+ *       '201':
  *         description: Project created successfully
+ *         headers:
+ *           Location:
+ *             description: URL of the created project
+ *             schema:
+ *               type: string
  *         content:
  *           application/json:
  *             schema:
  *               $ref: '#/components/schemas/Project'
- *       400:
+ *       '400':
  *         description: Invalid input
  */
 
@@ -260,7 +287,10 @@ router.post('/', async (req: Request, res: Response): Promise<void> => {
 
   try {
     await newProject.save();
-    res.status(201).json(newProject);
+    const location = `${req.protocol}://${req.get('host')}${req.baseUrl}/${newProject.ProjectID}`;
+    res.status(201)
+      .header('Location', location)
+      .json(newProject);
   } catch (error) {
     console.error('Error creating project:', error);
     res.status(500).send('Internal server error');
@@ -290,6 +320,26 @@ router.put('/:id', async (req: Request, res: Response): Promise<void> => {
     res.json(project);
   } catch (error) {
     console.error(`Error updating project with ID ${projectId}:`, error);
+    res.status(500).send('Internal server error');
+  }
+});
+
+router.delete('/:id', async (req: Request, res: Response): Promise<void> => {
+  const projectId = parseInt(req.params.id);
+  if (isNaN(projectId)) {
+    res.status(400).send('Invalid project ID');
+    return;
+  }
+
+  try {
+    const result = await Project.deleteById(projectId);
+    if (result) {
+      res.status(204).send();
+    } else {
+      res.status(404).send('Project not found');
+    }
+  } catch (error) {
+    console.error(`Error deleting project with ID ${projectId}:`, error);
     res.status(500).send('Internal server error');
   }
 });

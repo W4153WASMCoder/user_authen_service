@@ -4,6 +4,7 @@ import { ProjectFile } from '../models/files_models.js';
 import { paginate } from '../middleware/pagination.js';
 
 const router = Router();
+
 /**
  * @swagger
  * components:
@@ -168,6 +169,24 @@ const router = Router();
  *         description: Invalid input
  *       '404':
  *         description: Project file not found
+ *   delete:
+ *     summary: Delete a project file by ID
+ *     tags:
+ *       - ProjectFiles
+ *     parameters:
+ *       - in: path
+ *         name: id
+ *         required: true
+ *         schema:
+ *           type: integer
+ *         description: The project file ID
+ *     responses:
+ *       '204':
+ *         description: Project file deleted successfully
+ *       '404':
+ *         description: Project file not found
+ *       '500':
+ *         description: Internal server error
  */
 
 /**
@@ -183,10 +202,29 @@ const router = Router();
  *       content:
  *         application/json:
  *           schema:
- *             $ref: '#/components/schemas/ProjectFile'
+ *             type: object
+ *             required:
+ *               - ProjectID
+ *               - FileName
+ *               - IsDirectory
+ *             properties:
+ *               ProjectID:
+ *                 type: integer
+ *               ParentDirectory:
+ *                 type: integer
+ *                 nullable: true
+ *               FileName:
+ *                 type: string
+ *               IsDirectory:
+ *                 type: boolean
  *     responses:
  *       '201':
  *         description: Project file created successfully
+ *         headers:
+ *           Location:
+ *             description: URL of the created project file
+ *             schema:
+ *               type: string
  *         content:
  *           application/json:
  *             schema:
@@ -233,7 +271,6 @@ router.get('/', paginate, async (req: Request, res: Response): Promise<void> => 
   }
 });
 
-
 router.get('/:id', async (req: Request, res: Response): Promise<void> => {
   const fileId = parseInt(req.params.id);
   if (isNaN(fileId)) {
@@ -272,7 +309,10 @@ router.post('/', async (req: Request, res: Response): Promise<void> => {
 
   try {
     await newFile.save();
-    res.status(201).json(newFile);
+    const location = `${req.protocol}://${req.get('host')}${req.baseUrl}/${newFile.FileID}`;
+    res.status(201)
+      .header('Location', location)
+      .json(newFile);
   } catch (error) {
     console.error('Error creating project file:', error);
     res.status(500).send('Internal server error');
@@ -303,6 +343,26 @@ router.put('/:id', async (req: Request, res: Response): Promise<void> => {
     res.json(file);
   } catch (error) {
     console.error(`Error updating project file with ID ${fileId}:`, error);
+    res.status(500).send('Internal server error');
+  }
+});
+
+router.delete('/:id', async (req: Request, res: Response): Promise<void> => {
+  const fileId = parseInt(req.params.id);
+  if (isNaN(fileId)) {
+    res.status(400).send('Invalid project file ID');
+    return;
+  }
+
+  try {
+    const result = await ProjectFile.deleteById(fileId);
+    if (result) {
+      res.status(204).send();
+    } else {
+      res.status(404).send('Project file not found');
+    }
+  } catch (error) {
+    console.error(`Error deleting project file with ID ${fileId}:`, error);
     res.status(500).send('Internal server error');
   }
 });

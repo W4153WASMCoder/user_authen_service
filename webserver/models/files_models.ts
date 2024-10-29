@@ -85,7 +85,27 @@ export class Project {
         this._isDirty = false;
         return this;
     }
+    static async deleteById(id: number): Promise<boolean> {
+        try {
+            // Check if file exists
+            const [rows] = await pool.query<RowDataPacket[]>('SELECT * FROM Project WHERE project_id = ?', [id]);
+            
+            if (rows.length === 0) {
+                // Return false if the user does not exist
+                return false;
+            }
     
+            // Proceed to delete the user
+            await pool.query('DELETE FROM Project WHERE project_id = ?', [id]);
+            return true;
+        } catch (error) {
+            // Log the error for debugging
+            console.error('Error deleting file by ID:', error);
+            
+            // Return false in case of an error
+            return false;
+        }
+    }
     get OwningUserID() {
         return this._owningUserID;
     }
@@ -168,10 +188,10 @@ export class ProjectFile {
         // Get total count
         const [countRows] = await pool.query<RowDataPacket[]>('SELECT COUNT(*) as total FROM ProjectFiles');
         const total = countRows[0].total;
-        
+
         // Get files with limit and offset
         const [rows] = await pool.query<RowDataPacket[]>('SELECT * FROM ProjectFiles LIMIT ? OFFSET ?', [limit, offset]);
-        
+
         const files = rows.map(row => {
           const { FileID, ProjectID, ParentDirectory, FileName, IsDirectory, CreationDate } = row;
           return new ProjectFile(
@@ -183,7 +203,7 @@ export class ProjectFile {
             new Date(CreationDate)
           );
         });
-      
+
         return { files, total };
       } catch (error) {
         console.error('Error fetching project files:', error);
@@ -211,7 +231,27 @@ export class ProjectFile {
         this._isDirty = false;
         return this;
     }
-
+    static async deleteById(id: number): Promise<boolean> {
+        try {
+            // Check if file exists
+            const [rows] = await pool.query<RowDataPacket[]>('SELECT * FROM ProjectFiles WHERE file_id = ?', [id]);
+            
+            if (rows.length === 0) {
+                // Return false if the user does not exist
+                return false;
+            }
+    
+            // Proceed to delete the user
+            await pool.query('DELETE FROM ProjectFiles WHERE file_id = ?', [id]);
+            return true;
+        } catch (error) {
+            // Log the error for debugging
+            console.error('Error deleting file by ID:', error);
+            
+            // Return false in case of an error
+            return false;
+        }
+    }
     get ProjectID() {
         return this._projectID;
     }

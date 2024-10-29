@@ -43,8 +43,8 @@ const router = Router();
 /**
  * @swagger
  * tags:
- *   name: Users
- *   description: API endpoints for users
+ *   - name: Users
+ *     description: API endpoints for users
  */
 
 /**
@@ -52,7 +52,8 @@ const router = Router();
  * /users:
  *   get:
  *     summary: Get a list of users with pagination
- *     tags: [Users]
+ *     tags:
+ *       - Users
  *     parameters:
  *       - in: query
  *         name: limit
@@ -67,7 +68,7 @@ const router = Router();
  *           default: 0
  *         description: Number of users to skip
  *     responses:
- *       200:
+ *       '200':
  *         description: A paginated list of users
  *         content:
  *           application/json:
@@ -91,15 +92,13 @@ const router = Router();
  *                       type: string
  *                     next:
  *                       type: string
- *                       nullable: true
  *                     prev:
  *                       type: string
- *                       nullable: true
  *                     first:
  *                       type: string
  *                     last:
  *                       type: string
- *       500:
+ *       '500':
  *         description: Internal server error
  */
 router.get('/', paginate, async (req: Request, res: Response): Promise<void> => {
@@ -145,7 +144,8 @@ router.get('/', paginate, async (req: Request, res: Response): Promise<void> => 
  * /users/{id}:
  *   get:
  *     summary: Get a user by ID
- *     tags: [Users]
+ *     tags:
+ *       - Users
  *     parameters:
  *       - in: path
  *         name: id
@@ -154,17 +154,18 @@ router.get('/', paginate, async (req: Request, res: Response): Promise<void> => 
  *           type: integer
  *         description: The user ID
  *     responses:
- *       200:
+ *       '200':
  *         description: A user object
  *         content:
  *           application/json:
  *             schema:
  *               $ref: '#/components/schemas/User'
- *       404:
+ *       '404':
  *         description: User not found
  *   put:
  *     summary: Update a user by ID
- *     tags: [Users]
+ *     tags:
+ *       - Users
  *     parameters:
  *       - in: path
  *         name: id
@@ -187,26 +188,45 @@ router.get('/', paginate, async (req: Request, res: Response): Promise<void> => 
  *               picture:
  *                 type: string
  *     responses:
- *       200:
+ *       '200':
  *         description: User updated successfully
  *         content:
  *           application/json:
  *             schema:
  *               $ref: '#/components/schemas/User'
- *       400:
+ *       '400':
  *         description: Invalid input
- *       404:
+ *       '404':
  *         description: User not found
+ *   delete:
+ *     summary: Delete a user by ID
+ *     tags:
+ *       - Users
+ *     parameters:
+ *       - in: path
+ *         name: id
+ *         required: true
+ *         schema:
+ *           type: integer
+ *         description: The user ID
+ *     responses:
+ *       '204':
+ *         description: User deleted successfully
+ *       '404':
+ *         description: User not found
+ *       '500':
+ *         description: Internal server error
  */
 
 /**
  * @swagger
  * /users:
  *   post:
- *     summary: Create or update a user
- *     tags: [Users]
+ *     summary: Create a new user
+ *     tags:
+ *       - Users
  *     requestBody:
- *       description: User object to create or update
+ *       description: User object to create
  *       required: true
  *       content:
  *         application/json:
@@ -227,13 +247,18 @@ router.get('/', paginate, async (req: Request, res: Response): Promise<void> => 
  *               picture:
  *                 type: string
  *     responses:
- *       200:
- *         description: User created or updated successfully
+ *       '201':
+ *         description: User created successfully
+ *         headers:
+ *           Location:
+ *             description: URL of the created user
+ *             schema:
+ *               type: string
  *         content:
  *           application/json:
  *             schema:
  *               $ref: '#/components/schemas/User'
- *       400:
+ *       '400':
  *         description: Invalid input
  */
 
@@ -265,9 +290,12 @@ router.post('/', async (req: Request, res: Response): Promise<void> => {
   }
   try {
     const user = await User.createOrUpdate({ sub, email, name, picture });
-    res.status(200).json(user);
+    const location = `${req.protocol}://${req.get('host')}${req.baseUrl}/${user.UserID}`;
+    res.status(201)
+      .header('Location', location)
+      .json(user);
   } catch (error) {
-    console.error('Error creating or updating user:', error);
+    console.error('Error creating user:', error);
     res.status(500).send('Internal server error');
   }
 });
@@ -293,12 +321,31 @@ router.put('/:id', async (req: Request, res: Response): Promise<void> => {
     if (picture !== undefined) user.picture = picture;
     user.lastLogin = new Date();
 
-    // Implement an instance method 'update' in the User model to handle updates
     await user.update();
 
     res.json(user);
   } catch (error) {
     console.error(`Error updating user with ID ${userId}:`, error);
+    res.status(500).send('Internal server error');
+  }
+});
+
+router.delete('/:id', async (req: Request, res: Response): Promise<void> => {
+  const userId = parseInt(req.params.id);
+  if (isNaN(userId)) {
+    res.status(400).send('Invalid user ID');
+    return;
+  }
+
+  try {
+    const result = await User.deleteById(userId);
+    if (result) {
+      res.status(204).send();
+    } else {
+      res.status(404).send('User not found');
+    }
+  } catch (error) {
+    console.error(`Error deleting user with ID ${userId}:`, error);
     res.status(500).send('Internal server error');
   }
 });
