@@ -48,15 +48,15 @@ export class Project {
         // Get total count
         const [countRows] = await pool.query<RowDataPacket[]>('SELECT COUNT(*) as total FROM Projects');
         const total = countRows[0].total;
-        
+
         // Get projects with limit and offset
         const [rows] = await pool.query<RowDataPacket[]>('SELECT * FROM Projects LIMIT ? OFFSET ?', [limit, offset]);
-        
+
         const projects = rows.map(row => {
           const { ProjectID, OwningUserID, ProjectName, CreationDate } = row;
           return new Project(ProjectID, OwningUserID, ProjectName, new Date(CreationDate));
         });
-      
+
         return { projects, total };
       } catch (error) {
         console.error('Error fetching projects:', error);
@@ -162,7 +162,34 @@ export class ProjectFile {
             return null;
         }
     }
-
+    // Find all project files with pagination
+    static async findAll(limit: number, offset: number): Promise<{ files: ProjectFile[]; total: number }> {
+      try {
+        // Get total count
+        const [countRows] = await pool.query<RowDataPacket[]>('SELECT COUNT(*) as total FROM ProjectFiles');
+        const total = countRows[0].total;
+        
+        // Get files with limit and offset
+        const [rows] = await pool.query<RowDataPacket[]>('SELECT * FROM ProjectFiles LIMIT ? OFFSET ?', [limit, offset]);
+        
+        const files = rows.map(row => {
+          const { FileID, ProjectID, ParentDirectory, FileName, IsDirectory, CreationDate } = row;
+          return new ProjectFile(
+            FileID,
+            ProjectID,
+            ParentDirectory,
+            FileName,
+            IsDirectory,
+            new Date(CreationDate)
+          );
+        });
+      
+        return { files, total };
+      } catch (error) {
+        console.error('Error fetching project files:', error);
+        throw error;
+      }
+    }
     async save(): Promise<ProjectFile> {
         if (!this._isDirty) return this;
 
