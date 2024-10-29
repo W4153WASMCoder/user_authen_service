@@ -6,7 +6,7 @@ import http, { Server as HttpServer } from "http";
 import fs from "fs";
 import { generate_routes } from "./routes/router.js";
 // for projects microservice
-import project_router from "./routes/project.js";
+import project_router from "./routes/projects.js";
 import project_files_router from "./routes/project_files.js";
 // for users microservice
 import users_router from "./routes/users.js";
