@@ -7,6 +7,8 @@ import fs from 'fs';
 import { generate_routes } from './routes/router.js';
 import project_router from './routes/project.js';
 import project_files_router from './routes/project_files.js';
+import users_router from './routes/users.js';
+import user_tokens_router from './routes/user_tokens.js';
 import swagger from './swagger.js';
 import type { Express } from 'express'
 
@@ -28,6 +30,8 @@ app.use(express.urlencoded({extended:false}))
 generate_routes(app);
 app.use('/projects', project_router);
 app.use('/project_files', project_files_router);
+app.use('/users', users_router);
+app.use('/user_tokens', user_tokens_router);
 swagger(app as Express);
 //End Middleware definition
 
