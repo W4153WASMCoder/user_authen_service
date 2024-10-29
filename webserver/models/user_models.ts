@@ -82,6 +82,28 @@ export class User {
             console.error(`Error fetching User with ID ${UserID}:`, error);
             return null;
         }
+    }  
+    
+    // Fetch users with pagination
+    static async findAll({ limit, offset }: { limit: number; offset: number }): Promise<{ users: User[]; total: number }> {
+      try {
+        // Get total count
+        const [countRows] = await pool.query<RowDataPacket[]>('SELECT COUNT(*) as total FROM Users');
+        const total = countRows[0].total;
+  
+        // Get users with limit and offset
+        const [rows] = await pool.query<RowDataPacket[]>('SELECT * FROM Users LIMIT ? OFFSET ?', [limit, offset]);
+  
+        const users = rows.map(row => {
+          const { UserID, sub, email, name, picture, lastLogin } = row;
+          return new User(UserID, sub, email, name, picture, new Date(lastLogin));
+        });
+  
+        return { users, total };
+      } catch (error) {
+        console.error('Error fetching users:', error);
+        throw error;
+      }
     }
 
     // Convert User to JSON-compatible format
@@ -145,13 +167,34 @@ export class ActiveToken {
         return currentTime - creationTime < this.TTL * 1000;
     }
 
-    // Convert ActiveToken instance to JSON-compatible format
-    toJSON(): string {
-        return JSON.stringify({
-            TokenID: this.TokenID,
-            UserID: this.UserID,
-            TTL: this.TTL,
-            CreationDate: this.CreationDate
-        });
-    }
+    static async findAll(limit: number, offset: number): Promise<{ tokens: ActiveToken[]; total: number }> {
+        try {
+          // Get total count
+          const [countRows] = await pool.query<RowDataPacket[]>('SELECT COUNT(*) as total FROM ActiveTokens');
+          const total = countRows[0].total;
+    
+          // Get tokens with limit and offset
+          const [rows] = await pool.query<RowDataPacket[]>('SELECT * FROM ActiveTokens LIMIT ? OFFSET ?', [limit, offset]);
+    
+          const tokens = rows.map(row => {
+            const { TokenID, UserID, TTL, CreationDate } = row;
+            return new ActiveToken(TokenID, UserID, TTL, new Date(CreationDate));
+          });
+    
+          return { tokens, total };
+        } catch (error) {
+          console.error('Error fetching active tokens:', error);
+          throw error;
+        }
+      }
+      
+      // Convert ActiveToken instance to JSON-compatible format
+      toJSON(): string {
+          return JSON.stringify({
+              TokenID: this.TokenID,
+              UserID: this.UserID,
+              TTL: this.TTL,
+              CreationDate: this.CreationDate
+          });
+      }
 }

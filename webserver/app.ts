@@ -26,7 +26,7 @@ const httpServer: HttpServer = http.createServer(app);
 
 
 //Middleware Definition 
-app.use(express.static('../'));
+app.use(express.static('./static'));
 app.use(express.json())
 app.use(express.urlencoded({extended:false}))
 generate_routes(app);

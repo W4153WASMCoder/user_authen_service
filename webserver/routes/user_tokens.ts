@@ -1,6 +1,7 @@
 // routes/active_token.ts
 import { Router, Request, Response } from 'express';
 import { ActiveToken } from '../models/user_models.js'; // Adjust the path according to your project structure
+import { paginate } from '../middleware/pagination.js';
 
 const router = Router();
 
@@ -37,6 +38,99 @@ const router = Router();
  *   name: ActiveTokens
  *   description: API endpoints for active tokens
  */
+
+/**
+ * @swagger
+ * /tokens:
+ *   get:
+ *     summary: Get a list of active tokens with pagination
+ *     tags: [ActiveTokens]
+ *     parameters:
+ *       - in: query
+ *         name: limit
+ *         schema:
+ *           type: integer
+ *           default: 10
+ *         description: Maximum number of tokens to return
+ *       - in: query
+ *         name: offset
+ *         schema:
+ *           type: integer
+ *           default: 0
+ *         description: Number of tokens to skip
+ *     responses:
+ *       200:
+ *         description: A paginated list of active tokens
+ *         content:
+ *           application/json:
+ *             schema:
+ *               type: object
+ *               properties:
+ *                 total:
+ *                   type: integer
+ *                 limit:
+ *                   type: integer
+ *                 offset:
+ *                   type: integer
+ *                 data:
+ *                   type: array
+ *                   items:
+ *                     $ref: '#/components/schemas/ActiveToken'
+ *                 links:
+ *                   type: object
+ *                   properties:
+ *                     self:
+ *                       type: string
+ *                     next:
+ *                       type: string
+ *                       nullable: true
+ *                     prev:
+ *                       type: string
+ *                       nullable: true
+ *                     first:
+ *                       type: string
+ *                     last:
+ *                       type: string
+ *       500:
+ *         description: Internal server error
+ */
+router.get('/', paginate, async (req: Request, res: Response): Promise<void> => {
+  const { limit, offset } = (req as any).pagination;
+
+  try {
+    // Fetch tokens with pagination
+    const { tokens, total } = await ActiveToken.findAll(limit, offset);
+
+    // Generate HATEOAS links
+    const baseUrl = `${req.protocol}://${req.get('host')}${req.baseUrl}`;
+    const links: any = {
+      self: `${baseUrl}?limit=${limit}&offset=${offset}`,
+      first: `${baseUrl}?limit=${limit}&offset=0`,
+      last: `${baseUrl}?limit=${limit}&offset=${Math.floor((total - 1) / limit) * limit}`,
+    };
+
+    // Conditionally add 'next' link if the offset is within range
+    if (offset + limit < total) {
+      links.next = `${baseUrl}?limit=${limit}&offset=${offset + limit}`;
+    }
+
+    // Conditionally add 'prev' link if the offset is within range
+    if (offset - limit >= 0) {
+      links.prev = `${baseUrl}?limit=${limit}&offset=${offset - limit}`;
+    }
+
+    res.json({
+      total,
+      limit,
+      offset,
+      data: tokens,
+      links,
+    });
+  } catch (error) {
+    console.error('Error fetching active tokens:', error);
+    res.status(500).send('Internal server error');
+  }
+});
 
 /**
  * @swagger
