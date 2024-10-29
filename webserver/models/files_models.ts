@@ -4,12 +4,12 @@ import type { RowDataPacket } from 'mysql2';
 export class Project {
     private _isDirty: boolean = false; // Track if the record needs saving
 
-    ProjectID: number;
+    ProjectID: number | null;
     private _owningUserID: number;
     private _projectName: string;
     private _creationDate: Date;
 
-    constructor(ProjectID: number, OwningUserID: number, ProjectName: string, CreationDate: Date) {
+    constructor(ProjectID: number | null, OwningUserID: number, ProjectName: string, CreationDate: Date) {
         this.ProjectID = ProjectID;
         this._owningUserID = OwningUserID;
         this._projectName = ProjectName;
@@ -28,7 +28,7 @@ export class Project {
     static async find(ProjectID: number): Promise<Project | null> {
         try {
             const [rows] = await pool.query<RowDataPacket[]>(
-                'SELECT * FROM Project WHERE ProjectID = ?',
+                'SELECT * FROM Projects WHERE project_id = ?',
                 [ProjectID]
             );
 
@@ -99,14 +99,14 @@ export class Project {
 export class ProjectFile {
     private _isDirty: boolean = false;
 
-    FileID: number;
+    FileID: number | null;
     private _projectID: number;
     private _parentDirectory: number | null;
     private _fileName: string;
     private _isDirectory: boolean;
     private _creationDate: Date;
 
-    constructor(FileID: number, ProjectID: number, ParentDirectory: number | null, FileName: string, IsDirectory: boolean, CreationDate: Date) {
+    constructor(FileID: number | null, ProjectID: number, ParentDirectory: number | null, FileName: string, IsDirectory: boolean, CreationDate: Date) {
         this.FileID = FileID;
         this._projectID = ProjectID;
         this._parentDirectory = ParentDirectory;

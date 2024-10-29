@@ -17,7 +17,23 @@ export class User {
         this.picture = picture;
         this.lastLogin = lastLogin;
     }
+    async update(): Promise<void> {
+        try {
+          if (!this.UserID) 
+            throw new Error('Cannot update a user without UserID');
+        } catch (error) {
+          console.error('Error updating user:', error);
+          throw error;
+        }
+        const { UserID, sub, email, name, picture, lastLogin} = await User.createOrUpdate(this);
 
+        this.UserID = UserID;
+        this.sub = sub;
+        this.email = email;
+        this.name = name;
+        this.picture = picture;
+        this.lastLogin = lastLogin;
+      }
     // Create or update user based on OpenID Connect information
     static async createOrUpdate(userData: { sub: string; email: string; name: string; picture: string; }): Promise<User> {
         try {
