@@ -1,4 +1,4 @@
-import pool from '../db';
+import pool from '../db.js';
 import type { RowDataPacket } from 'mysql2';
 
 export class User {
