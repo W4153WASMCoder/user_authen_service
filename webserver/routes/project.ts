@@ -1,5 +1,7 @@
+// routes/project.ts
 import { Router, Request, Response } from 'express';
 import { Project } from '../models/files_models.js';
+import { paginate } from '../middleware/pagination.js';
 
 const router = Router();
 
@@ -42,6 +44,99 @@ const router = Router();
 
 /**
  * @swagger
+ * /projects:
+ *   get:
+ *     summary: Get a list of projects with pagination
+ *     tags: [Projects]
+ *     parameters:
+ *       - in: query
+ *         name: limit
+ *         schema:
+ *           type: integer
+ *           default: 10
+ *         description: Maximum number of projects to return
+ *       - in: query
+ *         name: offset
+ *         schema:
+ *           type: integer
+ *           default: 0
+ *         description: Number of projects to skip
+ *     responses:
+ *       200:
+ *         description: A paginated list of projects
+ *         content:
+ *           application/json:
+ *             schema:
+ *               type: object
+ *               properties:
+ *                 total:
+ *                   type: integer
+ *                 limit:
+ *                   type: integer
+ *                 offset:
+ *                   type: integer
+ *                 data:
+ *                   type: array
+ *                   items:
+ *                     $ref: '#/components/schemas/Project'
+ *                 links:
+ *                   type: object
+ *                   properties:
+ *                     self:
+ *                       type: string
+ *                     next:
+ *                       type: string
+ *                       nullable: true
+ *                     prev:
+ *                       type: string
+ *                       nullable: true
+ *                     first:
+ *                       type: string
+ *                     last:
+ *                       type: string
+ *       500:
+ *         description: Internal server error
+ */
+router.get('/', paginate, async (req: Request, res: Response): Promise<void> => {
+  const { limit, offset } = (req as any).pagination;
+
+  try {
+    // Fetch projects with pagination
+    const { projects, total } = await Project.findAll(limit, offset);
+
+    // Generate HATEOAS links
+    const baseUrl = `${req.protocol}://${req.get('host')}${req.baseUrl}`;
+    const links: any = {
+      self: `${baseUrl}?limit=${limit}&offset=${offset}`,
+      first: `${baseUrl}?limit=${limit}&offset=0`,
+      last: `${baseUrl}?limit=${limit}&offset=${Math.floor((total - 1) / limit) * limit}`,
+    };
+
+    // Conditionally add 'next' link if the offset is within range
+    if (offset + limit < total) {
+      links.next = `${baseUrl}?limit=${limit}&offset=${offset + limit}`;
+    }
+
+    // Conditionally add 'prev' link if the offset is within range
+    if (offset - limit >= 0) {
+      links.prev = `${baseUrl}?limit=${limit}&offset=${offset - limit}`;
+    }
+
+    res.json({
+      total,
+      limit,
+      offset,
+      data: projects,
+      links,
+    });
+  } catch (error) {
+    console.error('Error fetching projects:', error);
+    res.status(500).send('Internal server error');
+  }
+});
+
+/**
+ * @swagger
  * /projects/{id}:
  *   get:
  *     summary: Get a project by ID
@@ -78,7 +173,12 @@ const router = Router();
  *       content:
  *         application/json:
  *           schema:
- *             $ref: '#/components/schemas/Project'
+ *             type: object
+ *             properties:
+ *               OwningUserID:
+ *                 type: integer
+ *               ProjectName:
+ *                 type: string
  *     responses:
  *       200:
  *         description: Project updated successfully
@@ -104,16 +204,15 @@ const router = Router();
  *       content:
  *         application/json:
  *           schema:
- *             allOf:
- *               - $ref: '#/components/schemas/Project'
- *               - type: object
- *                 required:
- *                   - OwningUserID
- *                   - ProjectName
- *                 properties:
- *                   ProjectID:
- *                     type: integer
- *                     readOnly: true
+ *             type: object
+ *             required:
+ *               - OwningUserID
+ *               - ProjectName
+ *             properties:
+ *               OwningUserID:
+ *                 type: integer
+ *               ProjectName:
+ *                 type: string
  *     responses:
  *       201:
  *         description: Project created successfully
@@ -126,38 +225,60 @@ const router = Router();
  */
 
 router.get('/:id', async (req: Request, res: Response): Promise<void> => {
-    const projectId = parseInt(req.params.id);
+  const projectId = parseInt(req.params.id);
+  if (isNaN(projectId)) {
+    res.status(400).send('Invalid project ID');
+    return;
+  }
+
+  try {
     const project = await Project.find(projectId);
     if (!project) {
-        res.status(404).send('Project not found');
-        return;
+      res.status(404).send('Project not found');
+      return;
     }
     res.json(project);
+  } catch (error) {
+    console.error(`Error fetching project with ID ${projectId}:`, error);
+    res.status(500).send('Internal server error');
+  }
 });
 
 router.post('/', async (req: Request, res: Response): Promise<void> => {
-    const { OwningUserID, ProjectName } = req.body;
-    if (OwningUserID == null || ProjectName == null) {
-        res.status(400).send('Missing required fields');
-        return;
-    }
+  const { OwningUserID, ProjectName } = req.body;
+  if (OwningUserID == null || ProjectName == null) {
+    res.status(400).send('Missing required fields');
+    return;
+  }
 
-    const newProject = new Project(
-        null, // ProjectID will be auto-generated
-        OwningUserID,
-        ProjectName,
-        new Date()
-    );
+  const newProject = new Project(
+    null, // ProjectID will be auto-generated
+    OwningUserID,
+    ProjectName,
+    new Date()
+  );
+
+  try {
     await newProject.save();
     res.status(201).json(newProject);
+  } catch (error) {
+    console.error('Error creating project:', error);
+    res.status(500).send('Internal server error');
+  }
 });
 
 router.put('/:id', async (req: Request, res: Response): Promise<void> => {
-    const projectId = parseInt(req.params.id);
+  const projectId = parseInt(req.params.id);
+  if (isNaN(projectId)) {
+    res.status(400).send('Invalid project ID');
+    return;
+  }
+
+  try {
     const project = await Project.find(projectId);
     if (!project) {
-        res.status(404).send('Project not found');
-        return;
+      res.status(404).send('Project not found');
+      return;
     }
 
     const { OwningUserID, ProjectName } = req.body;
@@ -167,6 +288,10 @@ router.put('/:id', async (req: Request, res: Response): Promise<void> => {
 
     await project.save();
     res.json(project);
+  } catch (error) {
+    console.error(`Error updating project with ID ${projectId}:`, error);
+    res.status(500).send('Internal server error');
+  }
 });
 
 export default router;
