@@ -29,7 +29,7 @@ const swaggerOptions = {
             },
         ],
     },
-    apis: ['./src/routes/*.ts'], // Path to the files with API annotations
+    apis: ['./routes/*.ts'], // Path to the files with API annotations
 };
 
 const swaggerSpec = swaggerJSDoc(swaggerOptions);
