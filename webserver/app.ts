@@ -1,18 +1,23 @@
 // Import necessary modules with types
+// Common Express libs
 import * as dotenv from "dotenv";
 import express from "express";
 import type { Application } from "express";
 import http, { Server as HttpServer } from "http";
 import fs from "fs";
-import { generate_routes } from "./routes/router.js";
 // for projects microservice
 import project_router from "./routes/projects.js";
 import project_files_router from "./routes/project_files.js";
 // for users microservice
 import users_router from "./routes/users.js";
 import user_tokens_router from "./routes/user_tokens.js";
+
+// For OpenAPI
 import swagger from "./swagger.js";
 import type { Express } from "express";
+
+// Middleware
+import { log } from "./middleware/logger.js";
 
 // Load environment variables from .env file
 dotenv.config();
@@ -25,10 +30,10 @@ const httpServer: HttpServer = http.createServer(app);
 //const httpsServer = https.createServer(credentials, app);
 
 //Middleware Definition
+app.use(log);
 app.use(express.static("./static"));
 app.use(express.json());
 app.use(express.urlencoded({ extended: false }));
-generate_routes(app);
 // for projects microservice
 app.use("/projects", project_router);
 app.use("/project_files", project_files_router);

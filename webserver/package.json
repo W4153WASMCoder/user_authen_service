@@ -5,7 +5,7 @@
     "main": "app.ts",
     "type": "module",
     "scripts": {
-        "build": "npx tsc",
+        "build": "npx prettier --write . && npx tsc",
         "start": "node dist/app.js",
         "dev": "ts-node-dev --respawn --transpile-only app.ts"
     },
