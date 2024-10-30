@@ -111,7 +111,7 @@ export class User {
                 "SELECT * FROM Users WHERE user_id = ?",
                 [UserID],
             );
-            if (rows.length > 0) return null;
+            if (rows.length === 0) return null;
 
             const { sub, email, name, picture, lastLogin } = rows[0] as {
                 sub: string;
