@@ -17,6 +17,7 @@ import type { Express } from "express";
 // Middleware
 import { log_init, log_close } from "./middleware/logger.js";
 
+
 // Load environment variables from .env file
 dotenv.config();
 

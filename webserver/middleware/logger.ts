@@ -20,5 +20,6 @@ export function log_close(
     console.log(
         `[${timestamp}] ${req.method} ${req.originalUrl} request served.`,
     );
+
     next();
 }

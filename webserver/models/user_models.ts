@@ -210,14 +210,14 @@ export class ActiveToken {
         if (this.TokenID) {
             // Update an existing token
             await pool.query(
-                "UPDATE active_tokens SET UserID = ?, TTL = ?, CreationDate = ? WHERE token_id = ?",
+                "UPDATE active_tokens SET user_id = ?, ttl = ?, create_date = ? WHERE token_id = ?",
                 [this.UserID, this.TTL, this.CreationDate, this.TokenID],
             );
             return this;
         }
         // Insert a new token
         const [result]: any = await pool.query(
-            "INSERT INTO active_tokens (UserID, TTL, CreationDate) VALUES (?, ?, ?)",
+            "INSERT INTO active_tokens (user_id, ttl, create_date) VALUES (?, ?, ?)",
             [this.UserID, this.TTL, this.CreationDate],
         );
         this.TokenID = result.insertId; // MySQL returns the new ID
