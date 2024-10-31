@@ -84,12 +84,12 @@ export class User {
             );
             if (rows.length > 0) {
                 // User exists, update their info
-                const { user_id } = rows[0] as { user_id: number };
+                const { UserID } = rows[0] as { UserID: number };
                 await pool.query(
                     "UPDATE users SET email = ?, name = ?, picture = ?, lastLogin = ? WHERE user_id = ?",
-                    [email, name, picture, new Date(), user_id],
+                    [email, name, picture, new Date(), UserID],
                 );
-                return new User(user_id, sub, email, name, picture, new Date());
+                return new User(UserID, sub, email, name, picture, new Date());
             }
 
             // User doesn't exist, create a new record
@@ -138,27 +138,36 @@ export class User {
     static async findAll({
         limit,
         offset,
+        UserName,
     }: {
         limit: number;
         offset: number;
+        UserName: string | undefined;
     }): Promise<{ users: User[]; total: number }> {
         try {
+            let filterClauses = "";
+            let filterValues = [];
+            if (UserName) {
+                filterClauses += " AND name LIKE ?";
+                filterValues.push(`%${UserName}%`);
+            }
             // Get total count
             const [countRows] = await pool.query<RowDataPacket[]>(
-                "SELECT COUNT(*) as total FROM users",
+                `SELECT COUNT(*) as total FROM users WHERE 1=1 ${filterClauses}`,
+                filterValues,
             );
             const total = countRows[0].total;
 
             // Get users with limit and offset
             const [rows] = await pool.query<RowDataPacket[]>(
-                "SELECT * FROM users LIMIT ? OFFSET ?",
-                [limit, offset],
+                `SELECT * FROM users WHERE 1=1 ${filterClauses} LIMIT ? OFFSET ?`,
+                [...filterValues, limit, offset],
             );
 
-            const users = rows.map((row: any) => {
-                const { user_id, sub, email, name, picture, lastLogin } = row;
+            const users = rows.map((row) => {
+                const { UserID, sub, email, name, picture, lastLogin } = row;
                 return new User(
-                    user_id,
+                    UserID,
                     sub,
                     email,
                     name,
@@ -210,14 +219,14 @@ export class ActiveToken {
         if (this.TokenID) {
             // Update an existing token
             await pool.query(
-                "UPDATE active_tokens SET user_id = ?, ttl = ?, create_date = ? WHERE token_id = ?",
+                "UPDATE active_tokens SET UserID = ?, TTL = ?, CreationDate = ? WHERE token_id = ?",
                 [this.UserID, this.TTL, this.CreationDate, this.TokenID],
             );
             return this;
         }
         // Insert a new token
         const [result]: any = await pool.query(
-            "INSERT INTO active_tokens (user_id, ttl, create_date) VALUES (?, ?, ?)",
+            "INSERT INTO active_tokens (UserID, TTL, CreationDate) VALUES (?, ?, ?)",
             [this.UserID, this.TTL, this.CreationDate],
         );
         this.TokenID = result.insertId; // MySQL returns the new ID
@@ -232,12 +241,12 @@ export class ActiveToken {
         );
         if (rows.length === 0) return null;
 
-        const { user_id, ttl, create_date } = rows[0] as {
-            user_id: number;
-            ttl: number;
-            create_date: Date;
+        const { UserID, TTL, CreationDate } = rows[0] as {
+            UserID: number;
+            TTL: number;
+            CreationDate: Date;
         };
-        return new ActiveToken(TokenID, user_id, ttl, new Date(create_date));
+        return new ActiveToken(TokenID, UserID, TTL, new Date(CreationDate));
     }
 
     // Check if the token is still valid based on TTL and CreationDate
@@ -264,13 +273,13 @@ export class ActiveToken {
                 [limit, offset],
             );
 
-            const tokens = rows.map((row: any) => {
-                const { token_id, user_id, ttl, create_date } = row;
+            const tokens = rows.map((row) => {
+                const { TokenID, UserID, TTL, CreationDate } = row;
                 return new ActiveToken(
-                    token_id,
-                    user_id,
-                    ttl,
-                    new Date(create_date),
+                    TokenID,
+                    UserID,
+                    TTL,
+                    new Date(CreationDate),
                 );
             });
 

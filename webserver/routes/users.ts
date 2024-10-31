@@ -109,8 +109,15 @@ router.get(
         const { limit, offset } = (req as any).pagination;
 
         try {
+            const UserName: string | undefined = req.query.UserName as
+                | string
+                | undefined;
             // Fetch users with pagination
-            const { users, total } = await User.findAll({ limit, offset });
+            const { users, total } = await User.findAll({
+                limit,
+                offset,
+                UserName,
+            });
 
             const links = generateHATEOASLinks(req, total, limit, offset);
 
