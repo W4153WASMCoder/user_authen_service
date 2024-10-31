@@ -46,7 +46,7 @@ export class User {
         try {
             // Check if user exists
             const [rows] = await pool.query<RowDataPacket[]>(
-                "SELECT * FROM Users WHERE user_id = ?",
+                "SELECT * FROM users WHERE user_id = ?",
                 [id],
             );
 
@@ -56,7 +56,7 @@ export class User {
             }
 
             // Proceed to delete the user
-            await pool.query("DELETE FROM Users WHERE user_id = ?", [id]);
+            await pool.query("DELETE FROM users WHERE user_id = ?", [id]);
             return true;
         } catch (error) {
             // Log the error for debugging
@@ -79,14 +79,14 @@ export class User {
 
             // Check if user exists
             const [rows] = await pool.query<RowDataPacket[]>(
-                "SELECT * FROM Users WHERE sub = ?",
+                "SELECT * FROM users WHERE sub = ?",
                 [sub],
             );
             if (rows.length > 0) {
                 // User exists, update their info
                 const { UserID } = rows[0] as { UserID: number };
                 await pool.query(
-                    "UPDATE Users SET email = ?, name = ?, picture = ?, lastLogin = ? WHERE user_id = ?",
+                    "UPDATE users SET email = ?, name = ?, picture = ?, lastLogin = ? WHERE user_id = ?",
                     [email, name, picture, new Date(), UserID],
                 );
                 return new User(UserID, sub, email, name, picture, new Date());
@@ -94,7 +94,7 @@ export class User {
 
             // User doesn't exist, create a new record
             const [result]: any = await pool.query(
-                "INSERT INTO Users (sub, email, name, picture, lastLogin) VALUES (?, ?, ?, ?, ?)",
+                "INSERT INTO users (sub, email, name, picture, lastLogin) VALUES (?, ?, ?, ?, ?)",
                 [sub, email, name, picture, new Date()],
             );
             const UserID = result.insertId;
@@ -108,7 +108,7 @@ export class User {
     static async findById(UserID: number): Promise<User | null> {
         try {
             const [rows] = await pool.query<RowDataPacket[]>(
-                "SELECT * FROM Users WHERE user_id = ?",
+                "SELECT * FROM users WHERE user_id = ?",
                 [UserID],
             );
             if (rows.length === 0) return null;
@@ -145,13 +145,13 @@ export class User {
         try {
             // Get total count
             const [countRows] = await pool.query<RowDataPacket[]>(
-                "SELECT COUNT(*) as total FROM Users",
+                "SELECT COUNT(*) as total FROM users",
             );
             const total = countRows[0].total;
 
             // Get users with limit and offset
             const [rows] = await pool.query<RowDataPacket[]>(
-                "SELECT * FROM Users LIMIT ? OFFSET ?",
+                "SELECT * FROM users LIMIT ? OFFSET ?",
                 [limit, offset],
             );
 
@@ -210,14 +210,14 @@ export class ActiveToken {
         if (this.TokenID) {
             // Update an existing token
             await pool.query(
-                "UPDATE ActiveTokens SET UserID = ?, TTL = ?, CreationDate = ? WHERE token_id = ?",
+                "UPDATE active_tokens SET user_id = ?, ttl = ?, create_date = ? WHERE token_id = ?",
                 [this.UserID, this.TTL, this.CreationDate, this.TokenID],
             );
             return this;
         }
         // Insert a new token
         const [result]: any = await pool.query(
-            "INSERT INTO ActiveTokens (UserID, TTL, CreationDate) VALUES (?, ?, ?)",
+            "INSERT INTO active_tokens (user_id, ttl, create_date) VALUES (?, ?, ?)",
             [this.UserID, this.TTL, this.CreationDate],
         );
         this.TokenID = result.insertId; // MySQL returns the new ID
@@ -227,7 +227,7 @@ export class ActiveToken {
     // Find a token by its TokenID
     static async findById(TokenID: number): Promise<ActiveToken | null> {
         const [rows] = await pool.query<RowDataPacket[]>(
-            "SELECT * FROM ActiveTokens WHERE token_id = ?",
+            "SELECT * FROM active_tokens WHERE token_id = ?",
             [TokenID],
         );
         if (rows.length === 0) return null;
@@ -254,13 +254,13 @@ export class ActiveToken {
         try {
             // Get total count
             const [countRows] = await pool.query<RowDataPacket[]>(
-                "SELECT COUNT(*) as total FROM ActiveTokens",
+                "SELECT COUNT(*) as total FROM active_tokens",
             );
             const total = countRows[0].total;
 
             // Get tokens with limit and offset
             const [rows] = await pool.query<RowDataPacket[]>(
-                "SELECT * FROM ActiveTokens LIMIT ? OFFSET ?",
+                "SELECT * FROM active_tokens LIMIT ? OFFSET ?",
                 [limit, offset],
             );
 

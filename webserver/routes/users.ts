@@ -2,6 +2,7 @@
 import { Router, Request, Response } from "express";
 import { User } from "../models/user_models.js";
 import { paginate } from "../middleware/pagination.js";
+import { generateHATEOASLinks } from "../lib/hateoas.js";
 
 const router = Router();
 
@@ -111,23 +112,7 @@ router.get(
             // Fetch users with pagination
             const { users, total } = await User.findAll({ limit, offset });
 
-            // Generate HATEOAS links
-            const baseUrl = `${req.protocol}://${req.get("host")}${req.baseUrl}`;
-            const links: any = {
-                self: `${baseUrl}?limit=${limit}&offset=${offset}`,
-                first: `${baseUrl}?limit=${limit}&offset=0`,
-                last: `${baseUrl}?limit=${limit}&offset=${Math.floor((total - 1) / limit) * limit}`,
-            };
-
-            // Conditionally add 'next' link if the offset is within range
-            if (offset + limit < total) {
-                links.next = `${baseUrl}?limit=${limit}&offset=${offset + limit}`;
-            }
-
-            // Conditionally add 'prev' link if the offset is within range
-            if (offset - limit >= 0) {
-                links.prev = `${baseUrl}?limit=${limit}&offset=${offset - limit}`;
-            }
+            const links = generateHATEOASLinks(req, total, limit, offset);
 
             res.json({
                 total,

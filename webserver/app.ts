@@ -6,7 +6,6 @@ import type { Application } from "express";
 import http, { Server as HttpServer } from "http";
 import fs from "fs";
 
-
 // for users microservice
 import users_router from "./routes/users.js";
 import user_tokens_router from "./routes/user_tokens.js";
@@ -16,7 +15,8 @@ import swagger from "./swagger.js";
 import type { Express } from "express";
 
 // Middleware
-import { log } from "./middleware/logger.js";
+import { log_init, log_close } from "./middleware/logger.js";
+
 
 // Load environment variables from .env file
 dotenv.config();
@@ -29,7 +29,7 @@ const httpServer: HttpServer = http.createServer(app);
 //const httpsServer = https.createServer(credentials, app);
 
 //Middleware Definition
-app.use(log);
+app.use(log_init);
 app.use(express.static("./static"));
 app.use(express.json());
 app.use(express.urlencoded({ extended: false }));
@@ -38,6 +38,7 @@ app.use(express.urlencoded({ extended: false }));
 app.use("/users", users_router);
 app.use("/user_tokens", user_tokens_router);
 swagger(app as Express);
+app.use(log_close);
 //End Middleware definition
 
 //Start Server
