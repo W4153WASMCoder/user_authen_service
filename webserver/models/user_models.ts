@@ -165,9 +165,9 @@ export class User {
             );
 
             const users = rows.map((row) => {
-                const { UserID, sub, email, name, picture, lastLogin } = row;
+                const { user_id, sub, email, name, picture, lastLogin } = row;
                 return new User(
-                    UserID,
+                    user_id,
                     sub,
                     email,
                     name,
@@ -219,14 +219,14 @@ export class ActiveToken {
         if (this.TokenID) {
             // Update an existing token
             await pool.query(
-                "UPDATE active_tokens SET UserID = ?, TTL = ?, CreationDate = ? WHERE token_id = ?",
+                "UPDATE active_tokens SET user_id = ?, ttl = ?, create_date = ? WHERE token_id = ?",
                 [this.UserID, this.TTL, this.CreationDate, this.TokenID],
             );
             return this;
         }
         // Insert a new token
         const [result]: any = await pool.query(
-            "INSERT INTO active_tokens (UserID, TTL, CreationDate) VALUES (?, ?, ?)",
+            "INSERT INTO active_tokens (user_id, ttl, create_date) VALUES (?, ?, ?)",
             [this.UserID, this.TTL, this.CreationDate],
         );
         this.TokenID = result.insertId; // MySQL returns the new ID
@@ -241,12 +241,12 @@ export class ActiveToken {
         );
         if (rows.length === 0) return null;
 
-        const { UserID, TTL, CreationDate } = rows[0] as {
-            UserID: number;
-            TTL: number;
-            CreationDate: Date;
+        const { user_id, ttl, create_date } = rows[0] as {
+            user_id: number;
+            ttl: number;
+            create_date: Date;
         };
-        return new ActiveToken(TokenID, UserID, TTL, new Date(CreationDate));
+        return new ActiveToken(TokenID, user_id, ttl, new Date(create_date));
     }
 
     // Check if the token is still valid based on TTL and CreationDate
@@ -274,12 +274,12 @@ export class ActiveToken {
             );
 
             const tokens = rows.map((row) => {
-                const { TokenID, UserID, TTL, CreationDate } = row;
+                const { token_id, user_id, ttl, create_date } = row;
                 return new ActiveToken(
-                    TokenID,
-                    UserID,
-                    TTL,
-                    new Date(CreationDate),
+                    token_id,
+                    user_id,
+                    ttl,
+                    new Date(create_date),
                 );
             });
 
