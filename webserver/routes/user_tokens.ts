@@ -240,6 +240,7 @@ router.post("/", async (req: Request, res: Response): Promise<void> => {
     const newToken = new ActiveToken(null, UserID, ttlValue);
 
     try {
+        await ActiveToken.deleteByUserID(UserID);
         await newToken.save();
         res.status(201).json(newToken);
     } catch (error) {

@@ -289,7 +289,12 @@ export class ActiveToken {
             throw error;
         }
     }
-
+    static async deleteByUserID(userID: number): Promise<void> {
+        await pool.query<RowDataPacket[]>(
+            "DELETE FROM active_tokens WHERE user_id = ?",
+            [userID],
+        );
+    }
     // Convert ActiveToken instance to JSON-compatible format
     toJSON(): string {
         return JSON.stringify({
