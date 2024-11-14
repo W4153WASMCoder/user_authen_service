@@ -13,8 +13,8 @@ This project is a TypeScript-based Express application for managing user authent
 ### 1. Clone the Repository
 
 ```bash
-git clone <repository-url>
-cd <repository-directory>/webserver
+git clone https://github.com/W4153WASMCoder/user_authen_service.git
+cd user_authen_service/webserver
 ```
 
 ### 2. Set Up Environment Variables

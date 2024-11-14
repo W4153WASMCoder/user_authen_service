@@ -12,10 +12,10 @@ const swaggerOptions = {
         openapi: "3.0.0",
         info: {
             // update title to name of service API
-            title: "Project API",
+            title: "Users API",
             // update versioning over time
             version: "0.0.1",
-            description: "API documentation for Project and ProjectFile models",
+            description: "API documentation for User and Active Token models",
         },
         servers: [
             {
