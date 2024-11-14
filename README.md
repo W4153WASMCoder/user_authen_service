@@ -10,14 +10,7 @@ This project is a TypeScript-based Express application for managing user authent
 
 ## Getting Started
 
-### 1. Clone the Repository
-
-```bash
-git clone https://github.com/W4153WASMCoder/user_authen_service.git
-cd user_authen_service/webserver
-```
-
-### 2. Set Up Environment Variables
+### 1. Set Up Environment Variables
 
 Create a `.env` file in the `webserver` directory and add the following details:
 
@@ -32,7 +25,7 @@ PORT=8081
 
 Adjust the values according to your local setup or production configuration.
 
-### 3. Install Dependencies
+### 2. Install Dependencies
 
 Navigate to the `webserver` directory and install dependencies:
 
@@ -40,7 +33,7 @@ Navigate to the `webserver` directory and install dependencies:
 npm install
 ```
 
-### 4. Build the Project
+### 3. Build the Project
 
 To compile TypeScript files, run:
 
@@ -50,7 +43,7 @@ npm run build
 
 The compiled JavaScript files will be located in the `dist/` folder.
 
-### 5. Run the Application
+### 4. Run the Application
 
 - **Production:** Run the compiled code with Node.js:
   ```bash
@@ -62,7 +55,7 @@ The compiled JavaScript files will be located in the `dist/` folder.
   npm run dev
   ```
 
-### 6. Access the API
+### 5. Access the API
 
 Once running, the app will be accessible at `http://localhost:8081` (or the port specified in your `.env` file).
 
