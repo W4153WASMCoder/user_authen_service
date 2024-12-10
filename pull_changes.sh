@@ -15,7 +15,7 @@ if [[ $output != "Already up to date." ]]; then
     fi
 
     echo "Starting new screen session for myservice..."
-    screen -dmS myservice bash -c "cd /home/admin/user/webserver/ && npm run build && npm start"
+    screen -dmS myservice bash -c "cd /home/admin/user/webserver/ && npm run build; npm start"
     echo "New screen session started."
 
 else
