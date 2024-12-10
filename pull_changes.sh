@@ -25,3 +25,4 @@ if [[ $output != "Already up to date." ]]; then
 else
     echo "No changes detected. The Docker container will not be restarted."
 fi
+#
