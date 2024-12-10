@@ -6,26 +6,18 @@ git fetch origin
 output=$(git pull origin main)
 
 if [[ $output != "Already up to date." ]]; then
-    echo "Files have changed. Restarting container using a public Node.js image..."
+    echo "Files have changed."
+    echo "Stopping old screen session (if any)..."
 
-    if docker ps | grep -q "myservice-container"; then
-        echo "Stopping running container..."
-        sudo docker stop myservice-container
-        sudo docker rm myservice-container
-        echo "Old container stopped and removed."
+    if screen -list | grep -q "myservice"; then
+        screen -S myservice -X quit
+        echo "Old screen session stopped."
     fi
 
-    echo "Starting new Docker container..."
-    sudo docker run -d --name myservice-container \
-        -p 8081:8081 \
-        -w /home/admin/user \
-        -v /home/admin/user:/home/admin/user \
-        node:18-alpine \
-        sh -c "npm install && npm run build && npm start"
-
-    echo "New container started."
+    echo "Starting new screen session for myservice..."
+    screen -dmS myservice bash -c "cd /home/admin/user/webserver/ && npm run build && npm start"
+    echo "New screen session started."
 
 else
-    echo "No changes detected. The Docker container will not be restarted."
+    echo "No changes detected. The application will not be restarted."
 fi
-#
