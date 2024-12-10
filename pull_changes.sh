@@ -10,13 +10,13 @@ if [[ $output != "Already up to date." ]]; then
 
     if docker ps | grep -q "myservice-container"; then
         echo "Stopping running container..."
-        docker stop myservice-container
-        docker rm myservice-container
+        sudo docker stop myservice-container
+        sudo docker rm myservice-container
         echo "Old container stopped and removed."
     fi
 
     echo "Starting new Docker container..."
-    docker run -d --name myservice-container \
+    sudo docker run -d --name myservice-container \
         -p 8081:8081 \
         -w /home/admin/user \
         -v /home/admin/user:/home/admin/user \
