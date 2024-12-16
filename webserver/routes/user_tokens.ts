@@ -231,6 +231,7 @@ router.get("/:id", async (req: Request, res: Response): Promise<void> => {
 
 router.post("/", async (req: Request, res: Response): Promise<void> => {
     const { UserID, TTL } = req.body;
+    console.log("in user_tokens/, uid: " + req.uid);
     if (!UserID) {
         res.status(400).send("Missing required field: UserID");
         return;
