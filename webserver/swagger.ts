@@ -11,9 +11,7 @@ const swaggerOptions = {
     definition: {
         openapi: "3.0.0",
         info: {
-            // update title to name of service API
             title: "Users API",
-            // update versioning over time
             version: "0.0.1",
             description: "API documentation for User and Active Token models",
         },
@@ -22,14 +20,37 @@ const swaggerOptions = {
                 url: `http://localhost:${process.env.PORT}`,
                 description: "Development server",
             },
-            // add live server url here replacing localhost
             {
-                url: `http://localhost:${process.env.PORT}`,
-                description: "Production server",
+                url: `https://localhost:${process.env.PORT}`,
+                description: "Secure development server",
             },
         ],
+        // components: {
+        //     securitySchemes: {
+        //         googleOAuth: {
+        //             type: "oauth2",
+        //             flows: {
+        //                 authorizationCode: {
+        //                     authorizationUrl: `https://accounts.google.com/o/oauth2/auth`,
+        //                     tokenUrl: `https://oauth2.googleapis.com/token`,
+        //                     scopes: {
+        //                         "https://www.googleapis.com/auth/userinfo.profile":
+        //                             "Access your profile",
+        //                         "https://www.googleapis.com/auth/userinfo.email":
+        //                             "Access your email",
+        //                     },
+        //                 },
+        //             },
+        //         },
+        //     },
+        // },
+        // security: [
+        //     {
+        //         googleOAuth: [],
+        //     },
+        // ],
     },
-    apis: ["./routes/*.ts"], // Path to the files with API annotations
+    apis: ["./routes/*.ts"], // Path to your route files
 };
 
 const swaggerSpec = swaggerJSDoc(swaggerOptions);
