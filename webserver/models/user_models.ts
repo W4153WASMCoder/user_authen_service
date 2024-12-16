@@ -24,6 +24,7 @@ export class User {
         this.picture = picture;
         this.lastLogin = lastLogin;
     }
+
     async update(): Promise<void> {
         try {
             if (!this.UserID)
@@ -104,6 +105,52 @@ export class User {
             throw error;
         }
     }
+
+    static async findOrCreateByGoogleId(
+        googleId: string,
+        profile: any,
+    ): Promise<User> {
+        console.log("findOrCreateByGoogleId with googleId:", googleId);
+        const [rows] = await pool.query<RowDataPacket[]>(
+            "SELECT * FROM users WHERE sub = ?",
+            [googleId],
+        );
+        if (rows.length > 0) {
+            const { user_id, sub, email, name, picture, lastLogin } = rows[0];
+            console.log("User found:", rows[0]);
+            return new User(
+                user_id,
+                sub,
+                email,
+                name,
+                picture,
+                new Date(lastLogin),
+            );
+        }
+
+        const { displayName, emails, photos } = profile;
+        const [result]: any = await pool.query(
+            "INSERT INTO users (sub, email, name, picture, lastLogin) VALUES (?, ?, ?, ?, ?)",
+            [
+                googleId,
+                emails[0].value,
+                displayName,
+                photos[0].value,
+                new Date(),
+            ],
+        );
+        const UserID = result.insertId;
+        console.log("User created with UserID:", UserID);
+        return new User(
+            UserID,
+            googleId,
+            emails[0].value,
+            displayName,
+            photos[0].value,
+            new Date(),
+        );
+    }
+
     // Find user by UserID
     static async findById(UserID: number): Promise<User | null> {
         try {
@@ -113,15 +160,9 @@ export class User {
             );
             if (rows.length === 0) return null;
 
-            const { sub, email, name, picture, lastLogin } = rows[0] as {
-                sub: string;
-                email: string;
-                name: string;
-                picture: string;
-                lastLogin: Date;
-            };
+            const { user_id, sub, email, name, picture, lastLogin } = rows[0];
             return new User(
-                UserID,
+                user_id,
                 sub,
                 email,
                 name,
