@@ -5,6 +5,7 @@ import type { Application } from "express";
 import session from "express-session";
 import http, { Server as HttpServer } from "http";
 import fs from "fs";
+import cors from "cors";
 
 // for users microservice
 import users_router from "./routes/users.js";
@@ -33,6 +34,13 @@ const httpServer: HttpServer = http.createServer(app);
 
 // Middleware Definition
 app.use(log_init);
+app.use(
+    cors({
+        origin: process.env.CORS_ORIGIN,
+        methods: ["GET", "POST", "PUT", "DELETE", "OPTIONS"],
+        allowedHeaders: "*",
+    }),
+);
 app.use(express.static("./static"));
 app.use(express.json());
 app.use(express.urlencoded({ extended: false }));
